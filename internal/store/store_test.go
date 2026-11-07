@@ -2,6 +2,7 @@ package store_test
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"path/filepath"
@@ -151,5 +152,48 @@ func TestAlertAttachmentFields(t *testing.T) {
 	}
 	if got.AttachmentName != "squawk.jpg" || got.AttachmentSize != 72101 {
 		t.Fatalf("%+v", got)
+	}
+}
+
+func TestMigratesV010Schema(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "old.db")
+	raw, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := raw.Exec(`CREATE TABLE alerts (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		created_at TEXT NOT NULL,
+		sent_at TEXT,
+		status TEXT NOT NULL,
+		severity TEXT NOT NULL,
+		audience TEXT NOT NULL,
+		topic TEXT NOT NULL,
+		title TEXT NOT NULL,
+		body TEXT NOT NULL,
+		line TEXT NOT NULL,
+		link TEXT NOT NULL DEFAULT '',
+		priority INTEGER NOT NULL,
+		ntfy_id TEXT NOT NULL DEFAULT '',
+		http_status INTEGER NOT NULL DEFAULT 0,
+		error TEXT NOT NULL DEFAULT '',
+		resent_from INTEGER
+	)`); err != nil {
+		t.Fatal(err)
+	}
+	raw.Close()
+
+	s, err := store.Open(path)
+	if err != nil {
+		t.Fatalf("migrate: %v", err)
+	}
+	defer s.Close()
+	id, err := s.RecordAlert(ctx, store.Alert{Status: "sent", Severity: "seagull", Audience: "A", Topic: "t", Title: "T", Body: "B", Line: "L", Priority: 3, AttachmentName: "squawk.jpg", AttachmentSize: 7})
+	if err != nil {
+		t.Fatalf("insert after migrate: %v", err)
+	}
+	got, err := s.GetAlert(ctx, id)
+	if err != nil || got.AttachmentName != "squawk.jpg" {
+		t.Fatalf("%+v %v", got, err)
 	}
 }
