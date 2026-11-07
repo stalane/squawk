@@ -1,0 +1,86 @@
+{{define "content"}}
+<section class="hero">
+  <div class="hero-copy">
+    <p class="kicker">Urgent alerts, anonymously</p>
+    <h1>squawk</h1>
+    <p class="lede">Compose once. Subscribers get it on ntfy without either side sharing a phone number or email.</p>
+  </div>
+  <img class="hero-bird" src="/static/bird.jpg" alt="A screaming seagull">
+</section>
+
+{{if .Error}}<div class="banner error">{{.Error}}</div>{{end}}
+{{if .Notice}}<div class="banner">{{.Notice}}</div>{{end}}
+
+<div class="compose-grid">
+  <form class="card compose" method="post" action="/send" id="compose-form">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+
+    <fieldset class="severity">
+      <legend>Severity</legend>
+      <label class="sev sev-urgent">
+        <input type="radio" name="severity" value="urgent" {{if eq .Form.Severity "urgent"}}checked{{end}}>
+        <span>🚨 Urgent</span>
+      </label>
+      <label class="sev sev-warning">
+        <input type="radio" name="severity" value="warning" {{if eq .Form.Severity "warning"}}checked{{end}}>
+        <span>⚠️ Warning</span>
+      </label>
+      <label class="sev sev-info">
+        <input type="radio" name="severity" value="info" {{if eq .Form.Severity "info"}}checked{{end}}>
+        <span>ℹ️ Info</span>
+      </label>
+    </fieldset>
+
+    <label class="field">
+      <span>Audience</span>
+      {{if .HasAudiences}}
+      <select name="audience">
+        {{range .Audiences}}
+        <option value="{{.Label}}" {{if eq .Label $.Form.Audience}}selected{{end}}>{{.Label}}</option>
+        {{end}}
+      </select>
+      {{else}}
+      <p class="hint">No audiences yet. <a href="/audiences">Create one first</a>.</p>
+      {{end}}
+    </label>
+
+    <label class="field">
+      <span>Headline</span>
+      <input type="text" name="headline" maxlength="120" required value="{{.Form.Headline}}" placeholder="Crypto is being stolen from wallets">
+    </label>
+
+    <label class="field">
+      <span>Details</span>
+      <textarea name="details" rows="4" required placeholder="Do not use Safari on iPhone until you update to iOS 27.2">{{.Form.Details}}</textarea>
+    </label>
+
+    <label class="field">
+      <span>Link <em>optional</em></span>
+      <input type="url" name="link" value="{{.Form.Link}}" placeholder="https://example.com/advisory">
+    </label>
+
+    <label class="confirm" id="urgent-confirm">
+      <input type="checkbox" name="confirm" value="on">
+      <span>This bypasses Do Not Disturb on subscribers' phones.</span>
+    </label>
+
+    <div class="send-row">
+      <button class="primary" type="submit" {{if not .HasAudiences}}disabled{{end}}>Send alert</button>
+      <span class="counter"><span id="byte-count">0</span> / 4096 bytes</span>
+    </div>
+  </form>
+
+  <aside class="preview-wrap">
+    <p class="preview-label">What subscribers see</p>
+    <div class="phone">
+      <div class="phone-head">squawk · ntfy</div>
+      <div class="notif">
+        <div class="notif-title" id="pv-title">🚨 Headline</div>
+        <div class="notif-body" id="pv-body">Details</div>
+        <div class="notif-meta"><span id="pv-sev">Urgent</span> · now</div>
+      </div>
+    </div>
+    <p class="hint">Topic names are the only secret. Share them privately.</p>
+  </aside>
+</div>
+{{end}}

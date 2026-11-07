@@ -1,0 +1,49 @@
+{{define "content"}}
+<h1>Audiences</h1>
+<p class="lede">Each audience is one ntfy topic. The topic name is the only secret, so let squawk generate a long random one.</p>
+
+{{if .Error}}<div class="banner error">{{.Error}}</div>{{end}}
+{{if .Notice}}<div class="banner">{{.Notice}}</div>{{end}}
+
+{{if .Audiences}}
+<table class="table">
+  <thead><tr><th>Label</th><th>Topic</th><th>Default</th><th>Actions</th></tr></thead>
+  <tbody>
+    {{range .Audiences}}
+    <tr>
+      <td>{{.Label}}</td>
+      <td><code class="topic">{{.Topic}}</code></td>
+      <td><span class="badge sev-{{.DefaultSeverity}}">{{.DefaultSeverity}}</span></td>
+      <td class="actions">
+        <form method="post" action="/audiences/{{.ID}}/test">
+          <input type="hidden" name="csrf" value="{{$.CSRF}}">
+          <button type="submit">Send test</button>
+        </form>
+        <form method="post" action="/audiences/{{.ID}}/delete" onsubmit="return confirm('Delete {{.Label}}?')">
+          <input type="hidden" name="csrf" value="{{$.CSRF}}">
+          <button class="danger" type="submit">Delete</button>
+        </form>
+      </td>
+    </tr>
+    {{end}}
+  </tbody>
+</table>
+{{else}}
+<p class="empty">No audiences yet.</p>
+{{end}}
+
+<form class="card narrow" method="post" action="/audiences">
+  <h2>Add an audience</h2>
+  <input type="hidden" name="csrf" value="{{.CSRF}}">
+  <label class="field"><span>Label</span><input type="text" name="label" required placeholder="Family"></label>
+  <label class="field"><span>Topic <em>leave blank to generate</em></span><input type="text" name="topic" placeholder="squawk-..."></label>
+  <label class="field"><span>Default severity</span>
+    <select name="default_severity">
+      <option value="urgent">Urgent</option>
+      <option value="warning">Warning</option>
+      <option value="info">Info</option>
+    </select>
+  </label>
+  <button class="primary" type="submit">Add audience</button>
+</form>
+{{end}}

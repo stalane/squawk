@@ -1,0 +1,32 @@
+{{define "content"}}
+<h1>Settings</h1>
+
+{{if .Error}}<div class="banner error">{{.Error}}</div>{{end}}
+
+<form class="card narrow" method="post" action="/settings">
+  <input type="hidden" name="csrf" value="{{.CSRF}}">
+  <label class="field">
+    <span>ntfy base URL</span>
+    <input type="url" name="base_url" value="{{.BaseURL}}" required>
+  </label>
+  <label class="field">
+    <span>Access token <em>{{.TokenStatus}}</em></span>
+    <input type="password" name="token" placeholder="leave blank to keep the current token" autocomplete="off">
+  </label>
+  <label class="check"><input type="checkbox" name="clear_token" value="1"> Clear the stored token</label>
+  <label class="field">
+    <span>Web UI address</span>
+    <input type="text" name="addr" value="{{.Addr}}" required>
+  </label>
+  <label class="check"><input type="checkbox" name="open_browser" {{if .OpenBrowser}}checked{{end}}> Open the browser on start</label>
+  <button class="primary" type="submit">Save settings</button>
+</form>
+
+<dl class="meta card narrow">
+  <dt>Data directory</dt><dd><code>{{.DataDir}}</code></dd>
+  <dt>Config file</dt><dd><code>{{.ConfigPath}}</code></dd>
+  <dt>Version</dt><dd>{{.Version}}</dd>
+</dl>
+
+<p class="hint">The token is stored with 0600 permissions and is never displayed or logged.</p>
+{{end}}

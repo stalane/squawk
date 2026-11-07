@@ -1,0 +1,22 @@
+{{define "content"}}
+<p class="crumbs"><a href="/history">History</a> / alert {{.Alert.ID}}</p>
+<article class="card detail">
+  <span class="badge sev-{{.Alert.Severity}}">{{.Alert.Severity}}</span>
+  <span class="badge {{if eq .Alert.Status "sent"}}ok{{else}}bad{{end}}">{{.Alert.Status}}</span>
+  <h1 class="alert-line">{{.Alert.Line}}</h1>
+  <dl class="meta">
+    <dt>Audience</dt><dd>{{.Alert.Audience}}</dd>
+    <dt>Topic</dt><dd><code>{{.Alert.Topic}}</code></dd>
+    <dt>Priority</dt><dd>{{.Alert.Priority}}</dd>
+    <dt>Sent</dt><dd>{{datetime .Alert.CreatedAt}}</dd>
+    {{if .Alert.NtfyID}}<dt>ntfy ID</dt><dd><code>{{.Alert.NtfyID}}</code></dd>{{end}}
+    {{if .Alert.HTTPStatus}}<dt>HTTP</dt><dd>{{.Alert.HTTPStatus}}</dd>{{end}}
+    {{if .Alert.Error}}<dt>Error</dt><dd class="error-text">{{.Alert.Error}}</dd>{{end}}
+    {{if .Alert.ResentFrom}}<dt>Resent from</dt><dd><a href="/alerts/{{.Alert.ResentFrom}}">alert {{.Alert.ResentFrom}}</a></dd>{{end}}
+  </dl>
+  <form method="post" action="/alerts/{{.Alert.ID}}/resend">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <button class="primary" type="submit">Resend this alert</button>
+  </form>
+</article>
+{{end}}
