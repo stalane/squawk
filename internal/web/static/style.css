@@ -313,3 +313,16 @@ code { font-family: var(--mono); font-size: 13px; color: #cfe6ff; }
 @media (prefers-reduced-motion: no-preference) {
   .notif-title, .notif-body { transition: color 120ms ease; }
 }
+
+.button-link {
+  display: inline-flex;
+  align-items: center;
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: #16233a;
+  color: var(--text);
+  font-weight: 600;
+  font-size: 14px;
+}
+.button-link:hover { border-color: var(--blue); text-decoration: none; }

@@ -20,6 +20,7 @@ import (
 	"github.com/silentfirewall/squawk/internal/config"
 	"github.com/silentfirewall/squawk/internal/format"
 	"github.com/silentfirewall/squawk/internal/ntfy"
+	"github.com/silentfirewall/squawk/internal/service"
 	"github.com/silentfirewall/squawk/internal/store"
 	"github.com/silentfirewall/squawk/internal/version"
 )
@@ -66,6 +67,13 @@ type historyData struct {
 	Severity string
 }
 
+type audienceEditData struct {
+	Page     string
+	CSRF     string
+	Audience store.Audience
+	Error    string
+}
+
 type detailData struct {
 	Page  string
 	CSRF  string
@@ -88,6 +96,7 @@ type settingsData struct {
 	TokenStatus string
 	Addr        string
 	OpenBrowser bool
+	Autostart   string
 	DataDir     string
 	ConfigPath  string
 	Version     string
@@ -113,7 +122,7 @@ func New(cfg *config.Config, st *store.Store, pub Publisher, cfgPath string) (*S
 	}
 
 	pages := map[string]*template.Template{}
-	for _, name := range []string{"compose", "history", "detail", "audiences", "settings"} {
+	for _, name := range []string{"compose", "history", "detail", "audiences", "audience_edit", "settings"} {
 		t, err := template.New("layout").Funcs(funcs).ParseFS(assets, "templates/layout.html", "templates/"+name+".html")
 		if err != nil {
 			return nil, fmt.Errorf("parse %s template: %w", name, err)
@@ -154,10 +163,13 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /alerts/{id}/resend", s.handleResend)
 	mux.HandleFunc("GET /audiences", s.handleAudiences)
 	mux.HandleFunc("POST /audiences", s.handleCreateAudience)
+	mux.HandleFunc("GET /audiences/{id}", s.handleEditAudience)
+	mux.HandleFunc("POST /audiences/{id}", s.handleUpdateAudience)
 	mux.HandleFunc("POST /audiences/{id}/delete", s.handleDeleteAudience)
 	mux.HandleFunc("POST /audiences/{id}/test", s.handleTestAudience)
 	mux.HandleFunc("GET /settings", s.handleSettings)
 	mux.HandleFunc("POST /settings", s.handleSaveSettings)
+	mux.HandleFunc("POST /settings/test", s.handleTestConnection)
 
 	return s.hostGuard(mux)
 }
@@ -224,7 +236,11 @@ func (s *Server) hostAllowed(hostport string) bool {
 		return true
 	}
 	if bound, _, err := net.SplitHostPort(s.cfg.Server.Addr); err == nil {
-		return host == strings.ToLower(strings.Trim(bound, "[]"))
+		bound = strings.ToLower(strings.Trim(bound, "[]"))
+		if bound == "0.0.0.0" || bound == "::" {
+			return true
+		}
+		return host == bound
 	}
 	return false
 }
@@ -488,6 +504,11 @@ func (s *Server) handleCreateAudience(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if len(label) > 64 {
+		s.audiencesError(w, r, http.StatusBadRequest, "label must be at most 64 characters")
+		return
+	}
+
 	_, err := s.store.CreateAudience(r.Context(), store.Audience{Label: label, Topic: topic, DefaultSeverity: severity})
 	if errors.Is(err, store.ErrConflict) {
 		s.audiencesError(w, r, http.StatusConflict, "an audience with that label or topic already exists")
@@ -495,6 +516,10 @@ func (s *Server) handleCreateAudience(w http.ResponseWriter, r *http.Request) {
 	}
 	if err != nil {
 		s.audiencesError(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if weakTopic(topic) {
+		s.audiencesNotice(w, r, "Audience added, but that topic is short and guessable; consider deleting it and generating a random one.")
 		return
 	}
 	http.Redirect(w, r, "/audiences", http.StatusSeeOther)
@@ -560,18 +585,38 @@ func (s *Server) handleTestAudience(w http.ResponseWriter, r *http.Request) {
 	s.audiencesNotice(w, r, "Test alert sent to "+audience.Label)
 }
 
-func (s *Server) handleSettings(w http.ResponseWriter, r *http.Request) {
-	s.render(w, http.StatusOK, "settings", settingsData{
+func (s *Server) settingsView() settingsData {
+	return settingsData{
 		Page:        "settings",
 		CSRF:        s.csrf,
 		BaseURL:     s.cfg.BaseURL(),
 		TokenStatus: s.cfg.RedactedToken(),
 		Addr:        s.cfg.Server.Addr,
 		OpenBrowser: s.cfg.Server.OpenBrowser,
+		Autostart:   autostartStatus(),
 		DataDir:     s.dataDir,
 		ConfigPath:  s.cfgPath,
 		Version:     version.Version,
-	})
+	}
+}
+
+func (s *Server) handleSettings(w http.ResponseWriter, r *http.Request) {
+	s.render(w, http.StatusOK, "settings", s.settingsView())
+}
+
+func (s *Server) handleTestConnection(w http.ResponseWriter, r *http.Request) {
+	if !s.checkCSRF(r) {
+		http.Error(w, "invalid CSRF token", http.StatusForbidden)
+		return
+	}
+	data := s.settingsView()
+	if err := s.pub.Health(r.Context()); err != nil {
+		data.Error = "ntfy is not reachable: " + err.Error()
+		s.render(w, http.StatusBadGateway, "settings", data)
+		return
+	}
+	data.Notice = "ntfy is reachable."
+	s.render(w, http.StatusOK, "settings", data)
 }
 
 func (s *Server) handleSaveSettings(w http.ResponseWriter, r *http.Request) {
@@ -579,9 +624,7 @@ func (s *Server) handleSaveSettings(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid CSRF token", http.StatusForbidden)
 		return
 	}
-	data := settingsData{
-		Page: "settings", CSRF: s.csrf, DataDir: s.dataDir, ConfigPath: s.cfgPath, Version: version.Version,
-	}
+	data := s.settingsView()
 
 	baseURL := strings.TrimSpace(r.PostFormValue("base_url"))
 	u, err := url.Parse(baseURL)
@@ -623,6 +666,103 @@ func (s *Server) handleSaveSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.Redirect(w, r, "/settings", http.StatusSeeOther)
+}
+
+func (s *Server) handleEditAudience(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	audience, err := s.store.GetAudience(r.Context(), id)
+	if errors.Is(err, store.ErrNotFound) {
+		http.NotFound(w, r)
+		return
+	}
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	s.render(w, http.StatusOK, "audience_edit", audienceEditData{Page: "audiences", CSRF: s.csrf, Audience: audience})
+}
+
+func (s *Server) handleUpdateAudience(w http.ResponseWriter, r *http.Request) {
+	if !s.checkCSRF(r) {
+		http.Error(w, "invalid CSRF token", http.StatusForbidden)
+		return
+	}
+	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	existing, err := s.store.GetAudience(r.Context(), id)
+	if errors.Is(err, store.ErrNotFound) {
+		http.NotFound(w, r)
+		return
+	}
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	label := strings.TrimSpace(r.PostFormValue("label"))
+	topic := strings.TrimSpace(r.PostFormValue("topic"))
+	severity := strings.TrimSpace(r.PostFormValue("default_severity"))
+	if topic == "" {
+		topic = existing.Topic
+	}
+	audience := store.Audience{ID: id, Label: label, Topic: topic, DefaultSeverity: severity, CreatedAt: existing.CreatedAt}
+
+	renderError := func(status int, msg string) {
+		s.render(w, status, "audience_edit", audienceEditData{Page: "audiences", CSRF: s.csrf, Audience: audience, Error: msg})
+	}
+	if label == "" || len(label) > 64 {
+		renderError(http.StatusBadRequest, "label must be 1-64 characters")
+		return
+	}
+	if err := ntfy.ValidateTopic(topic); err != nil {
+		renderError(http.StatusBadRequest, err.Error())
+		return
+	}
+	if _, err := format.ParseSeverity(severity); err != nil {
+		renderError(http.StatusBadRequest, err.Error())
+		return
+	}
+	if err := s.store.UpdateAudience(r.Context(), audience); errors.Is(err, store.ErrConflict) {
+		renderError(http.StatusConflict, "an audience with that label or topic already exists")
+		return
+	} else if err != nil {
+		renderError(http.StatusInternalServerError, err.Error())
+		return
+	}
+	http.Redirect(w, r, "/audiences", http.StatusSeeOther)
+}
+
+func weakTopic(topic string) bool {
+	lower := strings.ToLower(topic)
+	if len(lower) < 16 {
+		return true
+	}
+	switch lower {
+	case "test", "alerts", "squawk", "urgent", "ntfy":
+		return true
+	}
+	return false
+}
+
+func autostartStatus() string {
+	installed, detail, err := service.Status()
+	if err != nil {
+		return "unsupported"
+	}
+	if !installed {
+		return "not installed"
+	}
+	if detail == "" {
+		detail = "installed"
+	}
+	return detail
 }
 
 func (s *Server) audiencesError(w http.ResponseWriter, r *http.Request, status int, msg string) {

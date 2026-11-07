@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -239,5 +240,86 @@ func TestSettingsRejectsRemotePlainHTTP(t *testing.T) {
 	}
 	if !strings.Contains(rec.Body.String(), "https") {
 		t.Fatal("expected an https explanation")
+	}
+}
+
+func TestNonLoopbackBindAllowsAnyHost(t *testing.T) {
+	dir := t.TempDir()
+	cfgPath := filepath.Join(dir, "config.yaml")
+	cfg := config.Default()
+	cfg.Server.Addr = "0.0.0.0:8788"
+	if err := cfg.Save(cfgPath); err != nil {
+		t.Fatal(err)
+	}
+	st, err := store.Open(filepath.Join(dir, "squawk.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer st.Close()
+	srv, err := web.New(cfg, st, &fakePublisher{}, cfgPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req := httptest.NewRequest("GET", "/", nil)
+	req.Host = "192.168.1.9:8788"
+	rec := httptest.NewRecorder()
+	srv.Handler().ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("got %d", rec.Code)
+	}
+}
+
+func TestWeakTopicWarns(t *testing.T) {
+	h := newHarness(t, false, "")
+	req := form(url.Values{
+		"csrf":             {h.server.CSRF()},
+		"label":            {"Weak"},
+		"topic":            {"test"},
+		"default_severity": {"info"},
+	})
+	req.URL.Path = "/audiences"
+	rec := h.do(req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("got %d", rec.Code)
+	}
+	if !strings.Contains(rec.Body.String(), "guessable") {
+		t.Fatal("expected a guessable-topic warning")
+	}
+}
+
+func TestSettingsTestConnection(t *testing.T) {
+	h := newHarness(t, true, "")
+	req := form(url.Values{"csrf": {h.server.CSRF()}})
+	req.URL.Path = "/settings/test"
+	rec := h.do(req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("got %d", rec.Code)
+	}
+	if !strings.Contains(rec.Body.String(), "reachable") {
+		t.Fatal("expected a reachable notice")
+	}
+}
+
+func TestEditAudience(t *testing.T) {
+	h := newHarness(t, true, "")
+	all, err := h.store.ListAudiences(ctx)
+	if err != nil || len(all) != 1 {
+		t.Fatalf("%v %v", all, err)
+	}
+	req := form(url.Values{
+		"csrf":             {h.server.CSRF()},
+		"label":            {"Close family"},
+		"topic":            {all[0].Topic},
+		"default_severity": {"warning"},
+	})
+	req.URL.Path = "/audiences/" + strconv.FormatInt(all[0].ID, 10)
+	rec := h.do(req)
+	if rec.Code != http.StatusSeeOther {
+		t.Fatalf("got %d: %s", rec.Code, rec.Body.String())
+	}
+	list := httptest.NewRequest("GET", "/audiences", nil)
+	page := h.do(list)
+	if !strings.Contains(page.Body.String(), "Close family") {
+		t.Fatal("edited label not shown")
 	}
 }

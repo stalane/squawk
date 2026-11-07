@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/silentfirewall/squawk/internal/store"
 )
@@ -114,5 +115,22 @@ func TestGetAlert(t *testing.T) {
 	}
 	if _, err := s.GetAlert(ctx, id+999); !errors.Is(err, store.ErrNotFound) {
 		t.Fatalf("missing alert: %v", err)
+	}
+}
+
+func TestNewestFirstUsesInsertionOrder(t *testing.T) {
+	s := newTestStore(t)
+	if _, err := s.RecordAlert(ctx, store.Alert{Status: "sent", Severity: "info", Audience: "A", Topic: "t", Title: "T", Body: "B", Line: "L", Priority: 3, NtfyID: "future", CreatedAt: time.Now().Add(time.Hour)}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.RecordAlert(ctx, store.Alert{Status: "sent", Severity: "info", Audience: "A", Topic: "t", Title: "T", Body: "B", Line: "L", Priority: 3, NtfyID: "now"}); err != nil {
+		t.Fatal(err)
+	}
+	all, err := s.ListAlerts(ctx, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if all[0].NtfyID != "now" {
+		t.Fatalf("newest insert must sort first, got %q", all[0].NtfyID)
 	}
 }

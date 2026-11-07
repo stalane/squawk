@@ -253,7 +253,7 @@ func (s *Store) SearchAlerts(ctx context.Context, query, severity string, limit 
 		q += ` AND (title LIKE ? OR body LIKE ? OR line LIKE ? OR audience LIKE ?)`
 		args = append(args, like, like, like, like)
 	}
-	q += ` ORDER BY created_at DESC, id DESC LIMIT ?`
+	q += ` ORDER BY id DESC LIMIT ?`
 	args = append(args, limit)
 
 	rows, err := s.db.QueryContext(ctx, q, args...)

@@ -2,6 +2,7 @@
 <h1>Settings</h1>
 
 {{if .Error}}<div class="banner error">{{.Error}}</div>{{end}}
+{{if .Notice}}<div class="banner">{{.Notice}}</div>{{end}}
 
 <form class="card narrow" method="post" action="/settings">
   <input type="hidden" name="csrf" value="{{.CSRF}}">
@@ -22,11 +23,18 @@
   <button class="primary" type="submit">Save settings</button>
 </form>
 
+<form class="card narrow" method="post" action="/settings/test">
+  <input type="hidden" name="csrf" value="{{.CSRF}}">
+  <button type="submit">Test connection</button>
+  <span class="hint">Checks that the configured ntfy server answers.</span>
+</form>
+
 <dl class="meta card narrow">
+  <dt>Autostart</dt><dd>{{.Autostart}}</dd>
   <dt>Data directory</dt><dd><code>{{.DataDir}}</code></dd>
   <dt>Config file</dt><dd><code>{{.ConfigPath}}</code></dd>
   <dt>Version</dt><dd>{{.Version}}</dd>
 </dl>
 
-<p class="hint">The token is stored with 0600 permissions and is never displayed or logged.</p>
+<p class="hint">A changed bind address applies after you restart squawk. The token is stored with 0600 permissions and is never displayed or logged.</p>
 {{end}}

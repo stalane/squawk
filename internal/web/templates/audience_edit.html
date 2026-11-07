@@ -1,0 +1,20 @@
+{{define "content"}}
+<p class="crumbs"><a href="/audiences">Audiences</a> / edit</p>
+<h1>Edit audience</h1>
+
+{{if .Error}}<div class="banner error">{{.Error}}</div>{{end}}
+
+<form class="card narrow" method="post" action="/audiences/{{.Audience.ID}}">
+  <input type="hidden" name="csrf" value="{{.CSRF}}">
+  <label class="field"><span>Label</span><input type="text" name="label" maxlength="64" required value="{{.Audience.Label}}"></label>
+  <label class="field"><span>Topic</span><input type="text" name="topic" required value="{{.Audience.Topic}}"></label>
+  <label class="field"><span>Default severity</span>
+    <select name="default_severity">
+      <option value="urgent" {{if eq .Audience.DefaultSeverity "urgent"}}selected{{end}}>Urgent</option>
+      <option value="warning" {{if eq .Audience.DefaultSeverity "warning"}}selected{{end}}>Warning</option>
+      <option value="info" {{if eq .Audience.DefaultSeverity "info"}}selected{{end}}>Info</option>
+    </select>
+  </label>
+  <button class="primary" type="submit">Save changes</button>
+</form>
+{{end}}
