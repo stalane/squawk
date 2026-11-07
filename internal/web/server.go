@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
+	"io"
 	"io/fs"
 	"net"
 	"net/http"
@@ -17,6 +18,7 @@ import (
 	"strings"
 	"time"
 
+	squawkassets "github.com/silentfirewall/squawk/internal/assets"
 	"github.com/silentfirewall/squawk/internal/config"
 	"github.com/silentfirewall/squawk/internal/format"
 	"github.com/silentfirewall/squawk/internal/ntfy"
@@ -27,6 +29,7 @@ import (
 
 type Publisher interface {
 	Publish(ctx context.Context, topic string, m ntfy.Message) (ntfy.Result, error)
+	PublishAttachment(ctx context.Context, topic string, m ntfy.Message, a ntfy.Attachment) (ntfy.Result, error)
 	Health(ctx context.Context) error
 }
 
@@ -283,6 +286,11 @@ func (s *Server) handleCompose(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleSend(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 16<<20)
+	if err := r.ParseMultipartForm(16 << 20); err != nil && !errors.Is(err, http.ErrNotMultipart) {
+		http.Error(w, "could not read the form: "+err.Error(), http.StatusBadRequest)
+		return
+	}
 	if !s.checkCSRF(r) {
 		http.Error(w, "invalid CSRF token", http.StatusForbidden)
 		return
@@ -320,6 +328,15 @@ func (s *Server) handleSend(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	attachment, attachErr := s.readAttachment(r, severity)
+	if attachErr != nil {
+		s.render(w, http.StatusBadRequest, "compose", composeData{
+			Page: "compose", CSRF: s.csrf, Audiences: audiences, HasAudiences: len(audiences) > 0,
+			Form: form, Error: attachErr.Error(), DefaultSeverity: string(severity),
+		})
+		return
+	}
+
 	alert := format.Alert{Severity: severity, Headline: form.Headline, Details: form.Details, Link: form.Link}
 	if err := alert.Validate(); err != nil {
 		s.render(w, http.StatusBadRequest, "compose", composeData{
@@ -336,7 +353,13 @@ func (s *Server) handleSend(w http.ResponseWriter, r *http.Request) {
 		Tags:     []string{severity.Tag()},
 		Click:    alert.Link,
 	}
-	res, sendErr := s.pub.Publish(r.Context(), audience.Topic, msg)
+	var res ntfy.Result
+	var sendErr error
+	if attachment != nil {
+		res, sendErr = s.pub.PublishAttachment(r.Context(), audience.Topic, msg, *attachment)
+	} else {
+		res, sendErr = s.pub.Publish(r.Context(), audience.Topic, msg)
+	}
 
 	record := store.Alert{
 		Status:     "sent",
@@ -350,6 +373,10 @@ func (s *Server) handleSend(w http.ResponseWriter, r *http.Request) {
 		Priority:   msg.Priority,
 		NtfyID:     res.ID,
 		HTTPStatus: res.HTTPStatus,
+	}
+	if attachment != nil {
+		record.AttachmentName = attachment.Filename
+		record.AttachmentSize = int64(len(attachment.Data))
 	}
 	if sendErr != nil {
 		record.Status = "failed"
@@ -435,7 +462,15 @@ func (s *Server) handleResend(w http.ResponseWriter, r *http.Request) {
 		Tags:     []string{severity.Tag()},
 		Click:    old.Link,
 	}
-	res, sendErr := s.pub.Publish(r.Context(), old.Topic, msg)
+	var res ntfy.Result
+	var sendErr error
+	if old.AttachmentName == squawkassets.SeagullName {
+		res, sendErr = s.pub.PublishAttachment(r.Context(), old.Topic, msg, ntfy.Attachment{
+			Filename: squawkassets.SeagullName, ContentType: squawkassets.SeagullType, Data: squawkassets.Seagull,
+		})
+	} else {
+		res, sendErr = s.pub.Publish(r.Context(), old.Topic, msg)
+	}
 	record := old
 	record.ID = 0
 	record.Status = "sent"
@@ -443,6 +478,10 @@ func (s *Server) handleResend(w http.ResponseWriter, r *http.Request) {
 	record.NtfyID = res.ID
 	record.HTTPStatus = res.HTTPStatus
 	record.Error = ""
+	if old.AttachmentName != squawkassets.SeagullName {
+		record.AttachmentName = ""
+		record.AttachmentSize = 0
+	}
 	if sendErr != nil {
 		record.Status = "failed"
 		record.Error = sendErr.Error()
@@ -737,6 +776,32 @@ func (s *Server) handleUpdateAudience(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.Redirect(w, r, "/audiences", http.StatusSeeOther)
+}
+
+func (s *Server) readAttachment(r *http.Request, severity format.Severity) (*ntfy.Attachment, error) {
+	file, header, err := r.FormFile("image")
+	if err == nil {
+		defer file.Close()
+		data, readErr := io.ReadAll(io.LimitReader(file, ntfy.MaxAttachmentBytes+1))
+		if readErr != nil {
+			return nil, errors.New("could not read the image")
+		}
+		if len(data) > ntfy.MaxAttachmentBytes {
+			return nil, fmt.Errorf("image is larger than %d MB", ntfy.MaxAttachmentBytes>>20)
+		}
+		contentType := http.DetectContentType(data)
+		if contentType != "image/jpeg" && contentType != "image/png" {
+			return nil, errors.New("image must be a JPEG or PNG")
+		}
+		return &ntfy.Attachment{Filename: filepath.Base(header.Filename), ContentType: contentType, Data: data}, nil
+	}
+	if !errors.Is(err, http.ErrMissingFile) && !errors.Is(err, http.ErrNotMultipart) {
+		return nil, errors.New("could not read the image")
+	}
+	if severity == format.Seagull {
+		return &ntfy.Attachment{Filename: squawkassets.SeagullName, ContentType: squawkassets.SeagullType, Data: squawkassets.Seagull}, nil
+	}
+	return nil, nil
 }
 
 func weakTopic(topic string) bool {

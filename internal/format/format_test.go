@@ -18,6 +18,7 @@ func TestParseSeverity(t *testing.T) {
 		{"urgent", format.Urgent, "🚨", 5, "rotating_light"},
 		{"warning", format.Warning, "⚠️", 4, "warning"},
 		{"info", format.Info, "ℹ️", 3, "information_source"},
+		{"seagull", format.Seagull, "🐦", 3, "bird"},
 		{"URGENT", format.Urgent, "🚨", 5, "rotating_light"},
 		{" warning ", format.Warning, "⚠️", 4, "warning"},
 	}
@@ -79,7 +80,6 @@ func TestValidateUTF8ByteLimit(t *testing.T) {
 func TestValidateRequiredFields(t *testing.T) {
 	cases := []format.Alert{
 		{Severity: format.Urgent, Headline: "", Details: "d"},
-		{Severity: format.Urgent, Headline: "h", Details: ""},
 		{Severity: "nope", Headline: "h", Details: "d"},
 		{Severity: format.Info, Headline: "h", Details: "d", Link: "not a url"},
 		{Severity: format.Info, Headline: strings.Repeat("a", 121), Details: "d"},
@@ -88,6 +88,32 @@ func TestValidateRequiredFields(t *testing.T) {
 		if err := a.Validate(); err == nil {
 			t.Fatalf("case %d must fail: %+v", i, a)
 		}
+	}
+}
+
+func TestLineWithoutDetails(t *testing.T) {
+	a := format.Alert{Severity: format.Info, Headline: "Heads up"}
+	if err := a.Validate(); err != nil {
+		t.Fatalf("details must be optional: %v", err)
+	}
+	if got := a.Line(); got != "ℹ️ Heads up" {
+		t.Fatalf("line %q", got)
+	}
+	if got := a.Body(); got != "No further details." {
+		t.Fatalf("body %q", got)
+	}
+}
+
+func TestLineWithLinkButNoDetails(t *testing.T) {
+	a := format.Alert{Severity: format.Seagull, Headline: "Mine", Link: "https://e.x"}
+	if err := a.Validate(); err != nil {
+		t.Fatal(err)
+	}
+	if got := a.Line(); got != "🐦 Mine -- https://e.x" {
+		t.Fatalf("line %q", got)
+	}
+	if got := a.Body(); got != "Squawk!\n\nhttps://e.x" {
+		t.Fatalf("body %q", got)
 	}
 }
 

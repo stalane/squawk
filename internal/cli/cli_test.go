@@ -115,3 +115,20 @@ func TestConfigShowRedactsToken(t *testing.T) {
 		t.Fatalf("token value leaked: %q", out.String())
 	}
 }
+
+func TestSendWithoutDetails(t *testing.T) {
+	dir := t.TempDir()
+	seedAudience(t, dir)
+	var out bytes.Buffer
+	code := cli.Run(context.Background(), []string{
+		"send", "--data-dir", dir,
+		"--audience", "Family", "--severity", "info",
+		"--headline", "Just a headline", "--dry-run",
+	}, &out, &out)
+	if code != 0 {
+		t.Fatalf("code=%d out=%q", code, out.String())
+	}
+	if !strings.Contains(out.String(), "ℹ️ Just a headline") || strings.Contains(out.String(), " -- ") {
+		t.Fatalf("out=%q", out.String())
+	}
+}

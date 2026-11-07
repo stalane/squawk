@@ -134,3 +134,22 @@ func TestNewestFirstUsesInsertionOrder(t *testing.T) {
 		t.Fatalf("newest insert must sort first, got %q", all[0].NtfyID)
 	}
 }
+
+func TestAlertAttachmentFields(t *testing.T) {
+	s := newTestStore(t)
+	id, err := s.RecordAlert(ctx, store.Alert{
+		Status: "sent", Severity: "seagull", Audience: "A", Topic: "t",
+		Title: "🐦 T", Body: "B", Line: "L", Priority: 3,
+		AttachmentName: "squawk.jpg", AttachmentSize: 72101,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := s.GetAlert(ctx, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.AttachmentName != "squawk.jpg" || got.AttachmentSize != 72101 {
+		t.Fatalf("%+v", got)
+	}
+}

@@ -43,13 +43,15 @@ CREATE TABLE IF NOT EXISTS alerts (
   ntfy_id TEXT NOT NULL DEFAULT '',
   http_status INTEGER NOT NULL DEFAULT 0,
   error TEXT NOT NULL DEFAULT '',
-  resent_from INTEGER
+  resent_from INTEGER,
+  attachment_name TEXT NOT NULL DEFAULT '',
+  attachment_size INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE INDEX IF NOT EXISTS idx_alerts_created_at ON alerts(created_at DESC);
 `
 
-const alertColumns = `id, created_at, sent_at, status, severity, audience, topic, title, body, line, link, priority, ntfy_id, http_status, error, resent_from`
+const alertColumns = `id, created_at, sent_at, status, severity, audience, topic, title, body, line, link, priority, ntfy_id, http_status, error, resent_from, attachment_name, attachment_size`
 
 type Audience struct {
 	ID              int64
@@ -60,22 +62,24 @@ type Audience struct {
 }
 
 type Alert struct {
-	ID         int64
-	CreatedAt  time.Time
-	SentAt     time.Time
-	Status     string
-	Severity   string
-	Audience   string
-	Topic      string
-	Title      string
-	Body       string
-	Line       string
-	Link       string
-	Priority   int
-	NtfyID     string
-	HTTPStatus int
-	Error      string
-	ResentFrom int64
+	ID             int64
+	CreatedAt      time.Time
+	SentAt         time.Time
+	Status         string
+	Severity       string
+	Audience       string
+	Topic          string
+	Title          string
+	Body           string
+	Line           string
+	Link           string
+	Priority       int
+	NtfyID         string
+	HTTPStatus     int
+	Error          string
+	ResentFrom     int64
+	AttachmentName string
+	AttachmentSize int64
 }
 
 type Store struct {
@@ -106,6 +110,15 @@ func Open(path string) (*Store, error) {
 	if _, err := db.Exec(schema); err != nil {
 		db.Close()
 		return nil, err
+	}
+	for _, col := range []struct{ name, def string }{
+		{"attachment_name", "TEXT NOT NULL DEFAULT ''"},
+		{"attachment_size", "INTEGER NOT NULL DEFAULT 0"},
+	} {
+		if err := ensureColumn(db, "alerts", col.name, col.def); err != nil {
+			db.Close()
+			return nil, err
+		}
 	}
 	return &Store{db: db}, nil
 }
@@ -224,10 +237,11 @@ func (s *Store) RecordAlert(ctx context.Context, a Alert) (int64, error) {
 	}
 
 	res, err := s.db.ExecContext(ctx,
-		`INSERT INTO alerts (created_at, sent_at, status, severity, audience, topic, title, body, line, link, priority, ntfy_id, http_status, error, resent_from)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		`INSERT INTO alerts (created_at, sent_at, status, severity, audience, topic, title, body, line, link, priority, ntfy_id, http_status, error, resent_from, attachment_name, attachment_size)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		formatTime(a.CreatedAt), sent, a.Status, a.Severity, a.Audience, a.Topic,
-		a.Title, a.Body, a.Line, a.Link, a.Priority, a.NtfyID, a.HTTPStatus, a.Error, resent)
+		a.Title, a.Body, a.Line, a.Link, a.Priority, a.NtfyID, a.HTTPStatus, a.Error, resent,
+		a.AttachmentName, a.AttachmentSize)
 	if err != nil {
 		return 0, err
 	}
@@ -292,7 +306,8 @@ func scanAlert(sc scanner) (Alert, error) {
 	var sent sql.NullString
 	var resent sql.NullInt64
 	err := sc.Scan(&a.ID, &created, &sent, &a.Status, &a.Severity, &a.Audience, &a.Topic,
-		&a.Title, &a.Body, &a.Line, &a.Link, &a.Priority, &a.NtfyID, &a.HTTPStatus, &a.Error, &resent)
+		&a.Title, &a.Body, &a.Line, &a.Link, &a.Priority, &a.NtfyID, &a.HTTPStatus, &a.Error, &resent,
+		&a.AttachmentName, &a.AttachmentSize)
 	if err != nil {
 		return Alert{}, err
 	}
@@ -304,6 +319,31 @@ func scanAlert(sc scanner) (Alert, error) {
 		a.ResentFrom = resent.Int64
 	}
 	return a, nil
+}
+
+func ensureColumn(db *sql.DB, table, column, definition string) error {
+	rows, err := db.Query(`PRAGMA table_info(` + table + `)`)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var cid int
+		var name, typ string
+		var notnull, pk int
+		var dflt any
+		if err := rows.Scan(&cid, &name, &typ, &notnull, &dflt, &pk); err != nil {
+			return err
+		}
+		if name == column {
+			return nil
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	_, err = db.Exec(`ALTER TABLE ` + table + ` ADD COLUMN ` + column + ` ` + definition)
+	return err
 }
 
 func mapConstraint(err error) error {

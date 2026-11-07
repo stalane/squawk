@@ -19,6 +19,7 @@ const (
 	Urgent  Severity = "urgent"
 	Warning Severity = "warning"
 	Info    Severity = "info"
+	Seagull Severity = "seagull"
 )
 
 func ParseSeverity(s string) (Severity, error) {
@@ -29,8 +30,10 @@ func ParseSeverity(s string) (Severity, error) {
 		return Warning, nil
 	case Info:
 		return Info, nil
+	case Seagull:
+		return Seagull, nil
 	default:
-		return "", fmt.Errorf("unknown severity %q: use urgent, warning or info", s)
+		return "", fmt.Errorf("unknown severity %q: use urgent, warning, info or seagull", s)
 	}
 }
 
@@ -42,6 +45,8 @@ func (s Severity) Emoji() string {
 		return "⚠️"
 	case Info:
 		return "ℹ️"
+	case Seagull:
+		return "🐦"
 	default:
 		return ""
 	}
@@ -54,6 +59,8 @@ func (s Severity) Priority() int {
 	case Warning:
 		return 4
 	case Info:
+		return 3
+	case Seagull:
 		return 3
 	default:
 		return 0
@@ -68,6 +75,8 @@ func (s Severity) Tag() string {
 		return "warning"
 	case Info:
 		return "information_source"
+	case Seagull:
+		return "bird"
 	default:
 		return ""
 	}
@@ -81,6 +90,8 @@ func (s Severity) Label() string {
 		return "Warning"
 	case Info:
 		return "Info"
+	case Seagull:
+		return "Seagull"
 	default:
 		return ""
 	}
@@ -104,9 +115,6 @@ func (a Alert) Validate() error {
 	if utf8.RuneCountInString(headline) > MaxHeadlineRunes {
 		return fmt.Errorf("headline must be at most %d characters", MaxHeadlineRunes)
 	}
-	if strings.TrimSpace(a.Details) == "" {
-		return errors.New("details are required")
-	}
 	if a.Link != "" {
 		u, err := url.Parse(a.Link)
 		if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
@@ -125,18 +133,28 @@ func (a Alert) Title() string {
 
 func (a Alert) Body() string {
 	body := strings.TrimSpace(a.Details)
-	if a.Link != "" {
-		body += "\n\n" + a.Link
+	if body == "" {
+		if a.Severity == Seagull {
+			body = "Squawk!"
+		} else {
+			body = "No further details."
+		}
 	}
-	return body
+	if a.Link == "" {
+		return body
+	}
+	return body + "\n\n" + a.Link
 }
 
 func (a Alert) Line() string {
-	line := a.Severity.Emoji() + " " + oneLine(a.Headline) + " -- " + oneLine(a.Details)
-	if a.Link != "" {
-		line += " -- " + a.Link
+	parts := []string{a.Severity.Emoji() + " " + oneLine(a.Headline)}
+	if details := oneLine(a.Details); details != "" {
+		parts = append(parts, details)
 	}
-	return line
+	if a.Link != "" {
+		parts = append(parts, a.Link)
+	}
+	return strings.Join(parts, " -- ")
 }
 
 func (a Alert) Bytes() int {

@@ -11,6 +11,7 @@
     <dt>Sent</dt><dd>{{datetime .Alert.CreatedAt}}</dd>
     {{if .Alert.NtfyID}}<dt>ntfy ID</dt><dd><code>{{.Alert.NtfyID}}</code></dd>{{end}}
     {{if .Alert.HTTPStatus}}<dt>HTTP</dt><dd>{{.Alert.HTTPStatus}}</dd>{{end}}
+    {{if .Alert.AttachmentName}}<dt>Image</dt><dd><code>{{.Alert.AttachmentName}}</code> · {{.Alert.AttachmentSize}} bytes <span class="muted">(ntfy attachments expire after 3 hours)</span></dd>{{end}}
     {{if .Alert.Error}}<dt>Error</dt><dd class="error-text">{{.Alert.Error}}</dd>{{end}}
     {{if .Alert.ResentFrom}}<dt>Resent from</dt><dd><a href="/alerts/{{.Alert.ResentFrom}}">alert {{.Alert.ResentFrom}}</a></dd>{{end}}
   </dl>

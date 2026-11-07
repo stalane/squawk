@@ -12,7 +12,7 @@
 {{if .Notice}}<div class="banner">{{.Notice}}</div>{{end}}
 
 <div class="compose-grid">
-  <form class="card compose" method="post" action="/send" id="compose-form">
+  <form class="card compose" method="post" action="/send" id="compose-form" enctype="multipart/form-data">
     <input type="hidden" name="csrf" value="{{.CSRF}}">
 
     <fieldset class="severity">
@@ -28,6 +28,10 @@
       <label class="sev sev-info">
         <input type="radio" name="severity" value="info" {{if eq .Form.Severity "info"}}checked{{end}}>
         <span>ℹ️ Info</span>
+      </label>
+      <label class="sev sev-seagull">
+        <input type="radio" name="severity" value="seagull" {{if eq .Form.Severity "seagull"}}checked{{end}}>
+        <span>🐦 Seagull <em>for jokes</em></span>
       </label>
     </fieldset>
 
@@ -50,13 +54,18 @@
     </label>
 
     <label class="field">
-      <span>Details</span>
-      <textarea name="details" rows="4" required placeholder="Do not use Safari on iPhone until you update to iOS 27.2">{{.Form.Details}}</textarea>
+      <span>Details <em>optional</em></span>
+      <textarea name="details" rows="4" placeholder="Do not use Safari on iPhone until you update to iOS 27.2">{{.Form.Details}}</textarea>
     </label>
 
     <label class="field">
       <span>Link <em>optional</em></span>
       <input type="url" name="link" value="{{.Form.Link}}" placeholder="https://example.com/advisory">
+    </label>
+
+    <label class="field">
+      <span>Image <em>optional · JPEG or PNG, max 15 MB</em></span>
+      <input type="file" name="image" id="image-input" accept="image/jpeg,image/png">
     </label>
 
     <label class="confirm" id="urgent-confirm">
@@ -75,6 +84,7 @@
     <div class="phone">
       <div class="phone-head">squawk · ntfy</div>
       <div class="notif">
+        <img class="pv-image" id="pv-image" alt="" hidden>
         <div class="notif-title" id="pv-title">🚨 Headline</div>
         <div class="notif-body" id="pv-body">Details</div>
         <div class="notif-meta"><span id="pv-sev">Urgent</span> · now</div>

@@ -4,8 +4,8 @@
   var form = document.getElementById("compose-form");
   if (!form) return;
 
-  var emoji = { urgent: "🚨", warning: "⚠️", info: "ℹ️" };
-  var label = { urgent: "Urgent", warning: "Warning", info: "Info" };
+  var emoji = { urgent: "🚨", warning: "⚠️", info: "ℹ️", seagull: "🐦" };
+  var label = { urgent: "Urgent", warning: "Warning", info: "Info", seagull: "Seagull" };
 
   var titleEl = document.getElementById("pv-title");
   var bodyEl = document.getElementById("pv-body");
@@ -14,6 +14,9 @@
   var confirmBox = document.getElementById("urgent-confirm");
   var confirmInput = confirmBox ? confirmBox.querySelector("input") : null;
   var submit = form.querySelector("button.primary");
+  var imageInput = document.getElementById("image-input");
+  var imagePreview = document.getElementById("pv-image");
+  var imageURL = null;
 
   function value(name) {
     var el = form.elements[name];
@@ -42,6 +45,25 @@
     if (bodyEl) bodyEl.textContent = details || "Details";
     if (sevEl) sevEl.textContent = label[sev] || sev;
     if (countEl) countEl.textContent = String(new TextEncoder().encode(line).length);
+
+    if (imagePreview) {
+      if (imageURL) {
+        URL.revokeObjectURL(imageURL);
+        imageURL = null;
+      }
+      var file = imageInput && imageInput.files && imageInput.files[0];
+      if (file) {
+        imageURL = URL.createObjectURL(file);
+        imagePreview.src = imageURL;
+        imagePreview.hidden = false;
+      } else if (sev === "seagull") {
+        imagePreview.src = "/static/bird.jpg";
+        imagePreview.hidden = false;
+      } else {
+        imagePreview.removeAttribute("src");
+        imagePreview.hidden = true;
+      }
+    }
 
     var urgent = sev === "urgent";
     if (confirmBox) confirmBox.classList.toggle("visible", urgent);

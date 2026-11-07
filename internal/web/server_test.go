@@ -1,7 +1,9 @@
 package web_test
 
 import (
+	"bytes"
 	"context"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -19,15 +21,27 @@ import (
 var ctx = context.Background()
 
 type fakePublisher struct {
-	last      ntfy.Message
-	lastTopic string
-	calls     int
-	err       error
+	last           ntfy.Message
+	lastAttachment ntfy.Attachment
+	lastTopic      string
+	calls          int
+	err            error
 }
 
 func (f *fakePublisher) Publish(_ context.Context, topic string, m ntfy.Message) (ntfy.Result, error) {
 	f.calls++
 	f.last = m
+	f.lastTopic = topic
+	if f.err != nil {
+		return ntfy.Result{HTTPStatus: 500}, f.err
+	}
+	return ntfy.Result{ID: "ntfy-id", Topic: topic, HTTPStatus: 200}, nil
+}
+
+func (f *fakePublisher) PublishAttachment(_ context.Context, topic string, m ntfy.Message, a ntfy.Attachment) (ntfy.Result, error) {
+	f.calls++
+	f.last = m
+	f.lastAttachment = a
 	f.lastTopic = topic
 	if f.err != nil {
 		return ntfy.Result{HTTPStatus: 500}, f.err
@@ -321,5 +335,106 @@ func TestEditAudience(t *testing.T) {
 	page := h.do(list)
 	if !strings.Contains(page.Body.String(), "Close family") {
 		t.Fatal("edited label not shown")
+	}
+}
+
+func TestDetailsAreOptional(t *testing.T) {
+	h := newHarness(t, true, "")
+	req := form(url.Values{
+		"csrf":     {h.server.CSRF()},
+		"severity": {"info"},
+		"audience": {"Family"},
+		"headline": {"Heads up"},
+	})
+	req.URL.Path = "/send"
+	rec := h.do(req)
+	if rec.Code != http.StatusSeeOther {
+		t.Fatalf("got %d: %s", rec.Code, rec.Body.String())
+	}
+	if h.pub.last.Body != "No further details." {
+		t.Fatalf("body %q", h.pub.last.Body)
+	}
+}
+
+func TestSeagullAutoAttachesImage(t *testing.T) {
+	h := newHarness(t, true, "")
+	req := form(url.Values{
+		"csrf":     {h.server.CSRF()},
+		"severity": {"seagull"},
+		"audience": {"Family"},
+		"headline": {"Mine now"},
+	})
+	req.URL.Path = "/send"
+	rec := h.do(req)
+	if rec.Code != http.StatusSeeOther {
+		t.Fatalf("got %d: %s", rec.Code, rec.Body.String())
+	}
+	if h.pub.last.Title != "🐦 Mine now" || h.pub.last.Priority != 3 {
+		t.Fatalf("message %+v", h.pub.last)
+	}
+	if h.pub.lastAttachment.Filename != "squawk.jpg" || len(h.pub.lastAttachment.Data) == 0 {
+		t.Fatalf("attachment %+v", h.pub.lastAttachment)
+	}
+}
+
+func TestUploadedImageIsAttached(t *testing.T) {
+	h := newHarness(t, true, "")
+	var buf bytes.Buffer
+	mw := multipart.NewWriter(&buf)
+	for k, v := range map[string]string{
+		"csrf": h.server.CSRF(), "severity": "info", "audience": "Family", "headline": "Photo",
+	} {
+		if err := mw.WriteField(k, v); err != nil {
+			t.Fatal(err)
+		}
+	}
+	part, err := mw.CreateFormFile("image", "bird.png")
+	if err != nil {
+		t.Fatal(err)
+	}
+	png := append([]byte("\x89PNG\r\n\x1a\n"), make([]byte, 32)...)
+	if _, err := part.Write(png); err != nil {
+		t.Fatal(err)
+	}
+	if err := mw.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	req := httptest.NewRequest("POST", "/send", &buf)
+	req.Header.Set("Content-Type", mw.FormDataContentType())
+	req.Host = "127.0.0.1:8788"
+	rec := httptest.NewRecorder()
+	h.server.Handler().ServeHTTP(rec, req)
+	if rec.Code != http.StatusSeeOther {
+		t.Fatalf("got %d: %s", rec.Code, rec.Body.String())
+	}
+	if h.pub.lastAttachment.Filename != "bird.png" || len(h.pub.lastAttachment.Data) == 0 {
+		t.Fatalf("attachment %+v", h.pub.lastAttachment)
+	}
+}
+
+func TestRejectsNonImageAttachment(t *testing.T) {
+	h := newHarness(t, true, "")
+	var buf bytes.Buffer
+	mw := multipart.NewWriter(&buf)
+	for k, v := range map[string]string{
+		"csrf": h.server.CSRF(), "severity": "info", "audience": "Family", "headline": "Bad",
+	} {
+		mw.WriteField(k, v)
+	}
+	part, _ := mw.CreateFormFile("image", "payload.txt")
+	part.Write([]byte("not an image"))
+	mw.Close()
+
+	req := httptest.NewRequest("POST", "/send", &buf)
+	req.Header.Set("Content-Type", mw.FormDataContentType())
+	req.Host = "127.0.0.1:8788"
+	rec := httptest.NewRecorder()
+	h.server.Handler().ServeHTTP(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("got %d", rec.Code)
+	}
+	if h.pub.calls != 0 {
+		t.Fatal("must not publish a non-image")
 	}
 }

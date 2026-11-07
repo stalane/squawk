@@ -5,11 +5,13 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
 	"strings"
 
+	"github.com/silentfirewall/squawk/internal/assets"
 	"github.com/silentfirewall/squawk/internal/config"
 	"github.com/silentfirewall/squawk/internal/format"
 	"github.com/silentfirewall/squawk/internal/ntfy"
@@ -70,6 +72,16 @@ func (p livePublisher) Publish(ctx context.Context, topic string, m ntfy.Message
 		Timeout:   p.cfg.Ntfy.Timeout,
 	})
 	return client.Publish(ctx, topic, m)
+}
+
+func (p livePublisher) PublishAttachment(ctx context.Context, topic string, m ntfy.Message, a ntfy.Attachment) (ntfy.Result, error) {
+	client := ntfy.New(ntfy.Config{
+		BaseURL:   p.cfg.BaseURL(),
+		Token:     p.cfg.Ntfy.Token,
+		UserAgent: "squawk/" + version.Version,
+		Timeout:   p.cfg.Ntfy.Timeout,
+	})
+	return client.PublishAttachment(ctx, topic, m, a)
 }
 
 func (p livePublisher) Health(ctx context.Context) error {
@@ -232,12 +244,13 @@ func runSend(ctx context.Context, g globals, args []string, stdout, stderr io.Wr
 	headline := fs.String("headline", "", "alert headline")
 	details := fs.String("details", "", "alert details")
 	link := fs.String("link", "", "optional http(s) link")
+	imagePath := fs.String("image", "", "optional JPEG or PNG to attach")
 	dryRun := fs.Bool("dry-run", false, "print without sending")
 	if err := fs.Parse(args); err != nil {
 		return 2
 	}
-	if *audienceLabel == "" || *headline == "" || *details == "" {
-		fmt.Fprintln(stderr, "squawk: --audience, --headline and --details are required")
+	if *audienceLabel == "" || *headline == "" {
+		fmt.Fprintln(stderr, "squawk: --audience and --headline are required")
 		return 2
 	}
 	severity, err := format.ParseSeverity(*severityText)
@@ -264,11 +277,43 @@ func runSend(ctx context.Context, g globals, args []string, stdout, stderr io.Wr
 		return 1
 	}
 
+	var attachment *ntfy.Attachment
+	if *imagePath != "" {
+		a, err := imageAttachment(*imagePath)
+		if err != nil {
+			fmt.Fprintf(stderr, "squawk: %v\n", err)
+			return 1
+		}
+		attachment = a
+	} else if severity == format.Seagull {
+		attachment = &ntfy.Attachment{Filename: assets.SeagullName, ContentType: assets.SeagullType, Data: assets.Seagull}
+	}
+
 	fmt.Fprintln(stdout, alert.Line())
 	if *dryRun {
 		return 0
 	}
-	return publish(ctx, cfg, st, audience, alert, stdout, stderr)
+	return publish(ctx, cfg, st, audience, alert, attachment, stdout, stderr)
+}
+
+func imageAttachment(path string) (*ntfy.Attachment, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+	data, err := io.ReadAll(io.LimitReader(file, ntfy.MaxAttachmentBytes+1))
+	if err != nil {
+		return nil, err
+	}
+	if len(data) > ntfy.MaxAttachmentBytes {
+		return nil, fmt.Errorf("image is larger than %d MB", ntfy.MaxAttachmentBytes>>20)
+	}
+	contentType := http.DetectContentType(data)
+	if contentType != "image/jpeg" && contentType != "image/png" {
+		return nil, fmt.Errorf("%s is not a JPEG or PNG", path)
+	}
+	return &ntfy.Attachment{Filename: filepath.Base(path), ContentType: contentType, Data: data}, nil
 }
 
 func runTest(ctx context.Context, g globals, args []string, stdout, stderr io.Writer) int {
@@ -304,10 +349,10 @@ func runTest(ctx context.Context, g globals, args []string, stdout, stderr io.Wr
 
 	alert := format.Alert{Severity: format.Info, Headline: "Squawk test", Details: "If you can read this, the topic works."}
 	fmt.Fprintln(stdout, alert.Line())
-	return publish(ctx, cfg, st, audience, alert, stdout, stderr)
+	return publish(ctx, cfg, st, audience, alert, nil, stdout, stderr)
 }
 
-func publish(ctx context.Context, cfg *config.Config, st *store.Store, audience store.Audience, alert format.Alert, stdout, stderr io.Writer) int {
+func publish(ctx context.Context, cfg *config.Config, st *store.Store, audience store.Audience, alert format.Alert, attachment *ntfy.Attachment, stdout, stderr io.Writer) int {
 	msg := ntfy.Message{
 		Title:    alert.Title(),
 		Body:     alert.Body(),
@@ -315,7 +360,13 @@ func publish(ctx context.Context, cfg *config.Config, st *store.Store, audience 
 		Tags:     []string{alert.Severity.Tag()},
 		Click:    alert.Link,
 	}
-	res, sendErr := livePublisher{cfg}.Publish(ctx, audience.Topic, msg)
+	var res ntfy.Result
+	var sendErr error
+	if attachment != nil {
+		res, sendErr = livePublisher{cfg}.PublishAttachment(ctx, audience.Topic, msg, *attachment)
+	} else {
+		res, sendErr = livePublisher{cfg}.Publish(ctx, audience.Topic, msg)
+	}
 
 	record := store.Alert{
 		Status:     "sent",
@@ -329,6 +380,10 @@ func publish(ctx context.Context, cfg *config.Config, st *store.Store, audience 
 		Priority:   msg.Priority,
 		NtfyID:     res.ID,
 		HTTPStatus: res.HTTPStatus,
+	}
+	if attachment != nil {
+		record.AttachmentName = attachment.Filename
+		record.AttachmentSize = int64(len(attachment.Data))
 	}
 	if sendErr != nil {
 		record.Status = "failed"

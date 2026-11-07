@@ -219,3 +219,50 @@ func TestAllowsLoopbackPlainHTTP(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestPublishAttachment(t *testing.T) {
+	var got *http.Request
+	var body []byte
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		got = r
+		body, _ = io.ReadAll(r.Body)
+		w.Header().Set("Content-Type", "application/json")
+		io.WriteString(w, `{"id":"img1","topic":"t"}`)
+	}))
+	defer srv.Close()
+
+	data := []byte{0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46}
+	c := ntfy.New(ntfy.Config{BaseURL: srv.URL, Timeout: time.Second, MaxAttempts: 1})
+	res, err := c.PublishAttachment(context.Background(), "squawk-images", ntfy.Message{
+		Title: "🐦 Seagull", Body: "mine", Priority: 3, Tags: []string{"bird"},
+	}, ntfy.Attachment{Filename: "squawk.jpg", ContentType: "image/jpeg", Data: data})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Method != "PUT" || got.URL.Path != "/squawk-images" {
+		t.Fatalf("%s %s", got.Method, got.URL.Path)
+	}
+	if got.Header.Get("Filename") != "squawk.jpg" || got.Header.Get("Content-Type") != "image/jpeg" {
+		t.Fatalf("headers %v", got.Header)
+	}
+	if got.Header.Get("Message") != "mine" || got.Header.Get("Title") != "🐦 Seagull" {
+		t.Fatalf("headers %v", got.Header)
+	}
+	if string(body) != string(data) {
+		t.Fatalf("body %v", body)
+	}
+	if res.ID != "img1" {
+		t.Fatalf("id %q", res.ID)
+	}
+}
+
+func TestPublishAttachmentLimits(t *testing.T) {
+	c := ntfy.New(ntfy.Config{BaseURL: "https://ntfy.sh", Timeout: time.Second, MaxAttempts: 1})
+	if _, err := c.PublishAttachment(context.Background(), "t", ntfy.Message{Title: "x"}, ntfy.Attachment{Data: []byte("x")}); err == nil {
+		t.Fatal("missing filename must fail")
+	}
+	big := make([]byte, ntfy.MaxAttachmentBytes+1)
+	if _, err := c.PublishAttachment(context.Background(), "t", ntfy.Message{Title: "x"}, ntfy.Attachment{Filename: "x.jpg", Data: big}); err == nil {
+		t.Fatal("oversize attachment must fail")
+	}
+}

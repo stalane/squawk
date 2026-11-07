@@ -151,6 +151,7 @@ legend, .field > span {
 .sev-urgent:has(input:checked) { border-color: var(--red); background: #2a1015; }
 .sev-warning:has(input:checked) { border-color: var(--gold); background: #2a2110; }
 .sev-info:has(input:checked) { border-color: var(--blue); }
+.sev-seagull:has(input:checked) { border-color: var(--violet); background: #1e1630; }
 
 .field { display: block; margin-bottom: 16px; }
 .field em { font-style: normal; text-transform: none; letter-spacing: 0; font-weight: 400; }
@@ -239,6 +240,7 @@ button.danger:hover { border-color: var(--red); }
   padding: 14px;
 }
 .notif-title { font-weight: 700; margin-bottom: 6px; word-break: break-word; }
+.pv-image { width: 100%; border-radius: 10px; margin-bottom: 10px; display: block; }
 .notif-body { color: #c7d3e4; font-size: 14px; white-space: pre-wrap; word-break: break-word; }
 .notif-meta { margin-top: 10px; color: var(--muted); font-size: 12px; }
 
@@ -291,6 +293,7 @@ button.danger:hover { border-color: var(--red); }
 }
 .badge.sev-urgent { color: #ff9ea2; border-color: #6b2026; background: #2a1015; }
 .badge.sev-warning { color: #ffd479; border-color: #5c4514; background: #2a2110; }
+.badge.sev-seagull { color: #d3c4ff; border-color: #4b3a7a; background: #1e1630; }
 .badge.sev-info { color: #9cc8ff; border-color: #24506f; background: #0e2233; }
 .badge.ok { color: #7ef0bf; border-color: #1d5c45; background: #0d2a20; }
 .badge.bad { color: #ff9ea2; border-color: #6b2026; background: #2a1015; }
@@ -311,7 +314,8 @@ code { font-family: var(--mono); font-size: 13px; color: #cfe6ff; }
 .hint { color: var(--muted); font-size: 13px; margin-top: 12px; }
 
 @media (prefers-reduced-motion: no-preference) {
-  .notif-title, .notif-body { transition: color 120ms ease; }
+  .notif-title, .pv-image { width: 100%; border-radius: 10px; margin-bottom: 10px; display: block; }
+.notif-body { transition: color 120ms ease; }
 }
 
 .button-link {

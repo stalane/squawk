@@ -18,7 +18,10 @@ import (
 	"time"
 )
 
-const maxResponseBytes = 64 << 10
+const (
+	maxResponseBytes   = 64 << 10
+	MaxAttachmentBytes = 15 << 20
+)
 
 var topicPattern = regexp.MustCompile(`^[A-Za-z0-9_-]{1,64}$`)
 
@@ -28,6 +31,12 @@ type Message struct {
 	Priority int
 	Tags     []string
 	Click    string
+}
+
+type Attachment struct {
+	Filename    string
+	ContentType string
+	Data        []byte
 }
 
 type Result struct {
@@ -79,6 +88,23 @@ func New(cfg Config) *Client {
 }
 
 func (c *Client) Publish(ctx context.Context, topic string, m Message) (Result, error) {
+	return c.publish(ctx, topic, m, nil)
+}
+
+func (c *Client) PublishAttachment(ctx context.Context, topic string, m Message, a Attachment) (Result, error) {
+	if a.Filename == "" {
+		return Result{}, errors.New("attachment filename is required")
+	}
+	if len(a.Data) == 0 {
+		return Result{}, errors.New("attachment is empty")
+	}
+	if len(a.Data) > MaxAttachmentBytes {
+		return Result{}, fmt.Errorf("attachment is %d bytes; the limit is %d", len(a.Data), MaxAttachmentBytes)
+	}
+	return c.publish(ctx, topic, m, &a)
+}
+
+func (c *Client) publish(ctx context.Context, topic string, m Message, a *Attachment) (Result, error) {
 	if err := ValidateTopic(topic); err != nil {
 		return Result{}, err
 	}
@@ -91,13 +117,30 @@ func (c *Client) Publish(ctx context.Context, topic string, m Message) (Result, 
 	}
 	endpoint := base + "/" + topic
 
+	method := http.MethodPost
+	reader := func() io.Reader { return strings.NewReader(m.Body) }
+	if a != nil {
+		method = http.MethodPut
+		reader = func() io.Reader { return bytes.NewReader(a.Data) }
+	}
+
 	var lastErr error
 	for attempt := 1; attempt <= c.cfg.MaxAttempts; attempt++ {
-		req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, strings.NewReader(m.Body))
+		req, err := http.NewRequestWithContext(ctx, method, endpoint, reader())
 		if err != nil {
 			return Result{}, err
 		}
-		req.Header.Set("Content-Type", "text/plain; charset=utf-8")
+		if a != nil {
+			ct := a.ContentType
+			if ct == "" {
+				ct = "application/octet-stream"
+			}
+			req.Header.Set("Content-Type", ct)
+			req.Header.Set("Filename", a.Filename)
+			req.Header.Set("Message", m.Body)
+		} else {
+			req.Header.Set("Content-Type", "text/plain; charset=utf-8")
+		}
 		req.Header.Set("Title", m.Title)
 		req.Header.Set("Priority", strconv.Itoa(m.Priority))
 		req.Header.Set("Markdown", "yes")
