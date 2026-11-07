@@ -585,8 +585,8 @@ func (s *Server) handleSaveSettings(w http.ResponseWriter, r *http.Request) {
 
 	baseURL := strings.TrimSpace(r.PostFormValue("base_url"))
 	u, err := url.Parse(baseURL)
-	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
-		data.Error = "base URL must be an http or https URL"
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" || ntfy.ValidateBaseURL(baseURL) != nil {
+		data.Error = "base URL must be an https URL (plain http is allowed only for localhost)"
 		data.BaseURL, data.TokenStatus = baseURL, s.cfg.RedactedToken()
 		data.Addr, data.OpenBrowser = s.cfg.Server.Addr, s.cfg.Server.OpenBrowser
 		s.render(w, http.StatusBadRequest, "settings", data)

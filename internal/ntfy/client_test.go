@@ -200,3 +200,22 @@ func TestHealth(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestRejectsRemotePlainHTTP(t *testing.T) {
+	c := ntfy.New(ntfy.Config{BaseURL: "http://ntfy.example.com", Timeout: time.Second, MaxAttempts: 1})
+	_, err := c.Publish(context.Background(), "t", ntfy.Message{Title: "x", Body: "y", Priority: 3})
+	if err == nil || !strings.Contains(err.Error(), "https") {
+		t.Fatalf("err = %v", err)
+	}
+}
+
+func TestAllowsLoopbackPlainHTTP(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		io.WriteString(w, `{"id":"ok"}`)
+	}))
+	defer srv.Close()
+	c := ntfy.New(ntfy.Config{BaseURL: srv.URL, Timeout: time.Second, MaxAttempts: 1})
+	if _, err := c.Publish(context.Background(), "t", ntfy.Message{Title: "x", Body: "y", Priority: 3}); err != nil {
+		t.Fatal(err)
+	}
+}

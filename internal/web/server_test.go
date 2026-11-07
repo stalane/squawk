@@ -224,3 +224,20 @@ func TestComposeWithNoAudiences(t *testing.T) {
 		t.Fatal("expected guidance to create an audience")
 	}
 }
+
+func TestSettingsRejectsRemotePlainHTTP(t *testing.T) {
+	h := newHarness(t, true, "")
+	req := form(url.Values{
+		"csrf":     {h.server.CSRF()},
+		"base_url": {"http://ntfy.example.com"},
+		"addr":     {"127.0.0.1:8788"},
+	})
+	req.URL.Path = "/settings"
+	rec := h.do(req)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("got %d", rec.Code)
+	}
+	if !strings.Contains(rec.Body.String(), "https") {
+		t.Fatal("expected an https explanation")
+	}
+}

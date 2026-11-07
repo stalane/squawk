@@ -9,7 +9,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -78,6 +80,9 @@ func New(cfg Config) *Client {
 
 func (c *Client) Publish(ctx context.Context, topic string, m Message) (Result, error) {
 	if err := ValidateTopic(topic); err != nil {
+		return Result{}, err
+	}
+	if err := ValidateBaseURL(c.cfg.BaseURL); err != nil {
 		return Result{}, err
 	}
 	base := strings.TrimRight(c.cfg.BaseURL, "/")
@@ -172,10 +177,10 @@ func (c *Client) Publish(ctx context.Context, topic string, m Message) (Result, 
 }
 
 func (c *Client) Health(ctx context.Context) error {
-	base := strings.TrimRight(c.cfg.BaseURL, "/")
-	if base == "" {
-		return errors.New("ntfy base URL is not configured")
+	if err := ValidateBaseURL(c.cfg.BaseURL); err != nil {
+		return err
 	}
+	base := strings.TrimRight(c.cfg.BaseURL, "/")
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, base+"/v1/health", nil)
 	if err != nil {
 		return err
@@ -196,6 +201,35 @@ func (c *Client) Health(ctx context.Context) error {
 		return decodeAPIError(resp.StatusCode, data)
 	}
 	return nil
+}
+
+func ValidateBaseURL(raw string) error {
+	if strings.TrimSpace(raw) == "" {
+		return errors.New("ntfy base URL is not configured")
+	}
+	u, err := url.Parse(strings.TrimRight(raw, "/"))
+	if err != nil || u.Host == "" {
+		return errors.New("invalid ntfy base URL")
+	}
+	switch u.Scheme {
+	case "https":
+		return nil
+	case "http":
+		if loopbackHost(u.Hostname()) {
+			return nil
+		}
+		return errors.New("ntfy base URL must use https (plain http is allowed only for localhost)")
+	default:
+		return errors.New("ntfy base URL must use https")
+	}
+}
+
+func loopbackHost(host string) bool {
+	if strings.EqualFold(host, "localhost") {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
 }
 
 func ValidateTopic(topic string) error {
