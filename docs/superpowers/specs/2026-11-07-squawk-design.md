@@ -78,9 +78,14 @@ sent.
 
 | Severity | Emoji | ntfy `Priority` | ntfy `Tags` |
 |---|---|---|---|
-| `urgent` | 🚨 | `5` (max, bypasses Do Not Disturb) | `rotating_light` |
-| `warning` | ⚠️ | `4` (high) | `warning` |
-| `info` | ℹ️ | `3` (default) | `information_source` |
+| `urgent` | 🚨 | `5` (max, bypasses Do Not Disturb) | `urgent` |
+| `warning` | ⚠️ | `4` (high) | `advisory` |
+| `info` | ℹ️ | `3` (default) | `notice` |
+| `seagull` | 🐦 | `3` (default) | `seagull` |
+
+Tags deliberately are not ntfy emoji short codes (`rotating_light`, `warning`,
+`information_source`, `bird`). ntfy converts a matching tag into an emoji and
+prepends it to the title, which would duplicate the emoji already in the title.
 
 ### 8.2 Rendered text
 

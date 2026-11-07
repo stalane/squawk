@@ -70,13 +70,13 @@ func (s Severity) Priority() int {
 func (s Severity) Tag() string {
 	switch s {
 	case Urgent:
-		return "rotating_light"
+		return "urgent"
 	case Warning:
-		return "warning"
+		return "advisory"
 	case Info:
-		return "information_source"
+		return "notice"
 	case Seagull:
-		return "bird"
+		return "seagull"
 	default:
 		return ""
 	}

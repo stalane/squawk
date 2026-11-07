@@ -15,12 +15,12 @@ func TestParseSeverity(t *testing.T) {
 		prio  int
 		tag   string
 	}{
-		{"urgent", format.Urgent, "🚨", 5, "rotating_light"},
-		{"warning", format.Warning, "⚠️", 4, "warning"},
-		{"info", format.Info, "ℹ️", 3, "information_source"},
-		{"seagull", format.Seagull, "🐦", 3, "bird"},
-		{"URGENT", format.Urgent, "🚨", 5, "rotating_light"},
-		{" warning ", format.Warning, "⚠️", 4, "warning"},
+		{"urgent", format.Urgent, "🚨", 5, "urgent"},
+		{"warning", format.Warning, "⚠️", 4, "advisory"},
+		{"info", format.Info, "ℹ️", 3, "notice"},
+		{"seagull", format.Seagull, "🐦", 3, "seagull"},
+		{"URGENT", format.Urgent, "🚨", 5, "urgent"},
+		{" warning ", format.Warning, "⚠️", 4, "advisory"},
 	}
 	for _, c := range cases {
 		got, err := format.ParseSeverity(c.in)
@@ -140,5 +140,17 @@ func TestValidateMultilineDetails(t *testing.T) {
 	}
 	if strings.Contains(a.Line(), "\n") {
 		t.Fatalf("line must be single-line: %q", a.Line())
+	}
+}
+
+func TestSeverityTagsAreNotEmojiShortCodes(t *testing.T) {
+	emojiCodes := map[string]bool{
+		"rotating_light": true, "warning": true, "information_source": true,
+		"bird": true, "skull": true, "triangular_flag_on_post": true,
+	}
+	for _, sev := range []format.Severity{format.Urgent, format.Warning, format.Info, format.Seagull} {
+		if emojiCodes[sev.Tag()] {
+			t.Fatalf("%s tag %q is an ntfy emoji short code; it would duplicate the title emoji", sev, sev.Tag())
+		}
 	}
 }
