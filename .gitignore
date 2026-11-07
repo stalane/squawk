@@ -1,0 +1,7 @@
+/squawk
+/dist/
+/coverage.out
+*.test
+*.exe
+.superpowers/
+.DS_Store
