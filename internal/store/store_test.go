@@ -214,3 +214,33 @@ func TestDeleteAlert(t *testing.T) {
 		t.Fatalf("second delete: %v", err)
 	}
 }
+
+func TestMigratesSeagullToFunny(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "squawk.db")
+	s, err := store.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	id, err := s.RecordAlert(ctx, store.Alert{Status: "sent", Severity: "seagull", Audience: "A", Topic: "t", Title: "T", Body: "B", Line: "L", Priority: 3})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.CreateAudience(ctx, store.Audience{Label: "Old", Topic: "squawk-old", DefaultSeverity: "seagull"}); err != nil {
+		t.Fatal(err)
+	}
+	s.Close()
+
+	s, err = store.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	alert, err := s.GetAlert(ctx, id)
+	if err != nil || alert.Severity != "funny" {
+		t.Fatalf("alert severity %q err %v", alert.Severity, err)
+	}
+	audiences, err := s.ListAudiences(ctx)
+	if err != nil || len(audiences) != 1 || audiences[0].DefaultSeverity != "funny" {
+		t.Fatalf("audiences %+v err %v", audiences, err)
+	}
+}

@@ -120,6 +120,15 @@ func Open(path string) (*Store, error) {
 			return nil, err
 		}
 	}
+	for _, stmt := range []string{
+		`UPDATE alerts SET severity = 'funny' WHERE severity = 'seagull'`,
+		`UPDATE audiences SET default_severity = 'funny' WHERE default_severity = 'seagull'`,
+	} {
+		if _, err := db.Exec(stmt); err != nil {
+			db.Close()
+			return nil, err
+		}
+	}
 	return &Store{db: db}, nil
 }
 

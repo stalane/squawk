@@ -278,6 +278,8 @@ button.danger:hover { border-color: var(--red); }
 .table td a { color: var(--text); }
 .table td a:hover { color: var(--blue); }
 .actions { display: flex; gap: 8px; }
+.table td.actions { display: table-cell; vertical-align: middle; text-align: center; }
+.table td.actions form { display: inline-block; }
 .actions form { display: inline; }
 .muted { color: var(--muted); }
 .empty { color: var(--muted); padding: 20px 0; }
