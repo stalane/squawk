@@ -16,7 +16,7 @@ builds:
       - amd64
       - arm64
     ldflags:
-      - -s -w -X github.com/silentfirewall/squawk/internal/version.Version={{.Tag}}
+      - -s -w -X github.com/stalane/squawk/internal/version.Version={{.Tag}}
 
 archives:
   - formats:
@@ -39,5 +39,5 @@ changelog:
 
 release:
   github:
-    owner: silentfirewall
+    owner: stalane
     name: squawk

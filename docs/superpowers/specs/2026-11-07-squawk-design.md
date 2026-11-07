@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-07
 **Status:** approved 2026-11-07
-**Repo:** `/home/david/Documents/squawk` · **GitHub:** `silentfirewall/squawk` · **License:** Apache-2.0
+**Repo:** `/home/david/Documents/squawk` · **GitHub:** `stalane/squawk` · **License:** Apache-2.0
 
 ## 1. Intent
 
@@ -70,7 +70,7 @@ sent.
 | Tray | Not in v1 |
 | UI theme | xwllz dark/blue, reusing alertme tokens |
 | Loopback port | `127.0.0.1:8788` (verified free 2026-11-07) |
-| Repo / license | `silentfirewall/squawk`, Apache-2.0 |
+| Repo / license | `stalane/squawk`, Apache-2.0 |
 
 ## 8. Alert contract
 
@@ -258,4 +258,4 @@ canonical one-liner, and publishes. `--dry-run` prints without sending.
 - GitHub Actions on `v*` tags.
 - README covers install, first run, subscriber instructions, and the privacy
   caveat that a public ntfy topic name is the only secret.
-- Push as `silentfirewall/squawk`; the token already carries `workflow`.
+- Push as `stalane/squawk`; the token already carries `workflow`.

@@ -18,13 +18,13 @@ import (
 	"strings"
 	"time"
 
-	squawkassets "github.com/silentfirewall/squawk/internal/assets"
-	"github.com/silentfirewall/squawk/internal/config"
-	"github.com/silentfirewall/squawk/internal/format"
-	"github.com/silentfirewall/squawk/internal/ntfy"
-	"github.com/silentfirewall/squawk/internal/service"
-	"github.com/silentfirewall/squawk/internal/store"
-	"github.com/silentfirewall/squawk/internal/version"
+	squawkassets "github.com/stalane/squawk/internal/assets"
+	"github.com/stalane/squawk/internal/config"
+	"github.com/stalane/squawk/internal/format"
+	"github.com/stalane/squawk/internal/ntfy"
+	"github.com/stalane/squawk/internal/service"
+	"github.com/stalane/squawk/internal/store"
+	"github.com/stalane/squawk/internal/version"
 )
 
 type Publisher interface {

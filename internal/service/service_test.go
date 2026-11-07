@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/silentfirewall/squawk/internal/service"
+	"github.com/stalane/squawk/internal/service"
 )
 
 func TestLinuxUnit(t *testing.T) {

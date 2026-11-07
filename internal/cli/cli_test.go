@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/silentfirewall/squawk/internal/cli"
-	"github.com/silentfirewall/squawk/internal/store"
-	"github.com/silentfirewall/squawk/internal/version"
+	"github.com/stalane/squawk/internal/cli"
+	"github.com/stalane/squawk/internal/store"
+	"github.com/stalane/squawk/internal/version"
 )
 
 func seedAudience(t *testing.T, dir string) {

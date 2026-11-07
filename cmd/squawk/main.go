@@ -4,7 +4,7 @@ import (
 	"context"
 	"os"
 
-	"github.com/silentfirewall/squawk/internal/cli"
+	"github.com/stalane/squawk/internal/cli"
 )
 
 func main() {

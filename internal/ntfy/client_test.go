@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/silentfirewall/squawk/internal/ntfy"
+	"github.com/stalane/squawk/internal/ntfy"
 )
 
 func TestPublishHeadersAndBody(t *testing.T) {

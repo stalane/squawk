@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/silentfirewall/squawk/internal/format"
+	"github.com/stalane/squawk/internal/format"
 )
 
 func TestParseSeverity(t *testing.T) {

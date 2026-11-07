@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/silentfirewall/squawk/internal/config"
+	"github.com/stalane/squawk/internal/config"
 )
 
 func TestDefaultsAndRoundTrip(t *testing.T) {

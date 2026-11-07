@@ -15,7 +15,7 @@ until you update to iOS 27.2 if you are on a version < 15
 ## Install
 
 ```sh
-go install github.com/silentfirewall/squawk/cmd/squawk@latest
+go install github.com/stalane/squawk/cmd/squawk@latest
 ```
 
 Or download a release binary for Linux, macOS or Windows (amd64/arm64). The

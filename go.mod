@@ -1,4 +1,4 @@
-module github.com/silentfirewall/squawk
+module github.com/stalane/squawk
 
 go 1.26.8
 

@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/silentfirewall/squawk/internal/store"
+	"github.com/stalane/squawk/internal/store"
 )
 
 var ctx = context.Background()

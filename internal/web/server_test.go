@@ -12,10 +12,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/silentfirewall/squawk/internal/config"
-	"github.com/silentfirewall/squawk/internal/ntfy"
-	"github.com/silentfirewall/squawk/internal/store"
-	"github.com/silentfirewall/squawk/internal/web"
+	"github.com/stalane/squawk/internal/config"
+	"github.com/stalane/squawk/internal/ntfy"
+	"github.com/stalane/squawk/internal/store"
+	"github.com/stalane/squawk/internal/web"
 )
 
 var ctx = context.Background()

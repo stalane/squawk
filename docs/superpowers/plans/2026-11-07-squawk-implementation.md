@@ -4,7 +4,7 @@
 
 **Goal:** Ship squawk, a send-only ntfy alert publisher as one static Go binary with a loopback web UI, SQLite history and resend.
 
-**Architecture:** Go module `github.com/silentfirewall/squawk` following the alertme recipe: `internal/format` renders the alert, `internal/ntfy` publishes it, `internal/store` records audiences and sends, `internal/web` serves embedded `html/template` + HTMX over loopback, `internal/cli` wires the subcommands. No cgo.
+**Architecture:** Go module `github.com/stalane/squawk` following the alertme recipe: `internal/format` renders the alert, `internal/ntfy` publishes it, `internal/store` records audiences and sends, `internal/web` serves embedded `html/template` + HTMX over loopback, `internal/cli` wires the subcommands. No cgo.
 
 **Tech Stack:** Go 1.26, `gopkg.in/yaml.v3`, `modernc.org/sqlite`, `html/template`, embedded static assets, GoReleaser.
 
@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- Module path is `github.com/silentfirewall/squawk`; license Apache-2.0.
+- Module path is `github.com/stalane/squawk`; license Apache-2.0.
 - `CGO_ENABLED=0` for every build and release target (linux/darwin/windows × amd64/arm64).
 - Default ntfy base URL `https://ntfy.sh`; default UI address `127.0.0.1:8788`.
 - Message limit 4096 UTF-8 bytes; headline limit 120 characters; topic `[A-Za-z0-9_-]{1,64}`.
@@ -48,7 +48,7 @@ Each line has a test in the task that owns the code.
 - [ ] **Step 1: Initialise the module and dependencies**
 
 ```bash
-go mod init github.com/silentfirewall/squawk
+go mod init github.com/stalane/squawk
 go get gopkg.in/yaml.v3 modernc.org/sqlite
 ```
 
@@ -84,7 +84,7 @@ Expected: PASS and a `squawk` binary builds.
 
 - [ ] **Step 7: Add release plumbing**
 
-`.goreleaser.yaml`: `project_name: squawk`, main `./cmd/squawk`, `CGO_ENABLED=0`, six targets, ldflags `-s -w -X github.com/silentfirewall/squawk/internal/version.Version={{.Tag}}`, tar.gz with zip override for windows, checksum. Workflow runs on `v*` tags with `goreleaser/goreleaser-action@v6`. Makefile targets `build`, `test`, `vet`, `fmt`, `release-check`.
+`.goreleaser.yaml`: `project_name: squawk`, main `./cmd/squawk`, `CGO_ENABLED=0`, six targets, ldflags `-s -w -X github.com/stalane/squawk/internal/version.Version={{.Tag}}`, tar.gz with zip override for windows, checksum. Workflow runs on `v*` tags with `goreleaser/goreleaser-action@v6`. Makefile targets `build`, `test`, `vet`, `fmt`, `release-check`.
 
 - [ ] **Step 8: Commit**
 
@@ -624,4 +624,4 @@ git tag v0.1.0
 
 - [ ] **Step 6: Publish**
 
-`gh auth switch --user silentfirewall`, create `silentfirewall/squawk` (private until the operator says public), push `main` and the tag, and confirm the release workflow produces six archives plus checksums.
+`gh auth switch --user silentfirewall`, create `stalane/squawk` (private until the operator says public), push `main` and the tag, and confirm the release workflow produces six archives plus checksums.

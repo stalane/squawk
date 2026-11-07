@@ -3,7 +3,7 @@ package version_test
 import (
 	"testing"
 
-	"github.com/silentfirewall/squawk/internal/version"
+	"github.com/stalane/squawk/internal/version"
 )
 
 func TestVersionDefault(t *testing.T) {
