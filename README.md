@@ -4,8 +4,9 @@ Send-only urgent alerts over [ntfy](https://ntfy.sh). One static Go binary with 
 loopback web UI, local history and resend.
 
 squawk is for the human alert, not the machine alert: compose a warning, pick an
-audience, see exactly what subscribers will get, and publish it. Subscribers use
-the ntfy app or web page and never share a phone number or email address.
+audience, see exactly what subscribers will get, and publish it. Attach a JPEG or
+PNG, or let the Seagull severity attach the bird for you. Subscribers use the ntfy
+app or web page and never share a phone number or email address.
 
 ```
 🚨 Crypto is right now being stolen from wallets -- Do not use Safari on iPhone
@@ -34,9 +35,9 @@ headless machine use `squawk serve` and open the URL yourself.
    long random one. Copy the topic.
 2. **Subscribe** — install the ntfy app, add a subscription, and paste the
    topic. Or open `https://ntfy.sh/<topic>` in a browser.
-3. **Compose** — choose severity, audience, headline and details. The preview is
-   what the phone shows. Urgent asks for confirmation because it bypasses Do Not
-   Disturb.
+3. **Compose** — choose severity, audience, headline and optional details. Add an
+   image if you want one. The preview is what the phone shows. Urgent asks for
+   confirmation because it bypasses Do Not Disturb.
 4. **History** — every send is stored locally with its ntfy message ID and can be
    resent.
 
@@ -47,6 +48,7 @@ headless machine use `squawk serve` and open the URL yourself.
 | Urgent | 🚨 | 5 (max) | active theft, compromise, act now |
 | Warning | ⚠️ | 4 (high) | a fix is available, avoid a thing |
 | Info | ℹ️ | 3 (default) | context, follow-ups |
+| Seagull | 🐦 | 3 (default) | jokes; attaches the seagull image automatically |
 
 ## CLI
 
@@ -57,6 +59,8 @@ squawk send --audience Family --severity urgent \
   --link https://example.com/advisory
 
 squawk send --audience Family --severity info --headline "Test" --details "Hello" --dry-run
+squawk send --audience Family --severity seagull --headline "Mine now"
+squawk send --audience Family --severity urgent --headline "Act now" --image advisory.jpg
 squawk topics list
 squawk topics add Clients
 squawk test --audience Family
@@ -74,6 +78,8 @@ Global flags: `--config PATH`, `--data-dir PATH`.
   you pass `--allow-non-loopback`.
 - CSRF and Host checks are enforced on a loopback socket; templates escape all
   alert text.
+- Images are uploaded to your ntfy server as attachments and expire after three
+  hours (ntfy's default); squawk keeps only the filename and size in local history.
 - The ntfy topic name **is the only secret**. On the public `ntfy.sh`, anyone who
   knows the topic can read the alerts. Use a generated long random name and
   share it privately. For stronger privacy, self-host ntfy with authentication
