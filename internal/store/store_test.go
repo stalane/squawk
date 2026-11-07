@@ -197,3 +197,20 @@ func TestMigratesV010Schema(t *testing.T) {
 		t.Fatalf("%+v %v", got, err)
 	}
 }
+
+func TestDeleteAlert(t *testing.T) {
+	s := newTestStore(t)
+	id, err := s.RecordAlert(ctx, store.Alert{Status: "sent", Severity: "info", Audience: "A", Topic: "t", Title: "T", Body: "B", Line: "L", Priority: 3})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.DeleteAlert(ctx, id); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.GetAlert(ctx, id); !errors.Is(err, store.ErrNotFound) {
+		t.Fatalf("deleted alert still present: %v", err)
+	}
+	if err := s.DeleteAlert(ctx, id); !errors.Is(err, store.ErrNotFound) {
+		t.Fatalf("second delete: %v", err)
+	}
+}

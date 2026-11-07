@@ -19,7 +19,7 @@ const (
 	Urgent  Severity = "urgent"
 	Warning Severity = "warning"
 	Info    Severity = "info"
-	Seagull Severity = "seagull"
+	Funny   Severity = "funny"
 )
 
 func ParseSeverity(s string) (Severity, error) {
@@ -30,10 +30,12 @@ func ParseSeverity(s string) (Severity, error) {
 		return Warning, nil
 	case Info:
 		return Info, nil
-	case Seagull:
-		return Seagull, nil
+	case Funny:
+		return Funny, nil
+	case "seagull":
+		return Funny, nil
 	default:
-		return "", fmt.Errorf("unknown severity %q: use urgent, warning, info or seagull", s)
+		return "", fmt.Errorf("unknown severity %q: use urgent, warning, info or funny", s)
 	}
 }
 
@@ -45,8 +47,8 @@ func (s Severity) Emoji() string {
 		return "⚠️"
 	case Info:
 		return "ℹ️"
-	case Seagull:
-		return "🐦"
+	case Funny:
+		return "😂"
 	default:
 		return ""
 	}
@@ -60,7 +62,7 @@ func (s Severity) Priority() int {
 		return 4
 	case Info:
 		return 3
-	case Seagull:
+	case Funny:
 		return 3
 	default:
 		return 0
@@ -75,8 +77,8 @@ func (s Severity) Tag() string {
 		return "advisory"
 	case Info:
 		return "notice"
-	case Seagull:
-		return "seagull"
+	case Funny:
+		return "funny"
 	default:
 		return ""
 	}
@@ -90,8 +92,8 @@ func (s Severity) Label() string {
 		return "Warning"
 	case Info:
 		return "Info"
-	case Seagull:
-		return "Seagull"
+	case Funny:
+		return "Funny"
 	default:
 		return ""
 	}
@@ -134,7 +136,7 @@ func (a Alert) Title() string {
 func (a Alert) Body() string {
 	body := strings.TrimSpace(a.Details)
 	if body == "" {
-		if a.Severity == Seagull {
+		if a.Severity == Funny {
 			body = "Squawk!"
 		} else {
 			body = "No further details."

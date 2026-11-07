@@ -2,8 +2,8 @@
 <section class="hero">
   <div class="hero-copy">
     <p class="kicker">Urgent alerts, anonymously</p>
-    <h1>squawk</h1>
-    <p class="lede">Compose once. Subscribers get it on ntfy without either side sharing a phone number or email.</p>
+    <h1>squawk <span class="accent-green">box</span></h1>
+    <p class="lede">Private notification engine. No phone numbers. No email addresses. No problem.</p>
   </div>
   <img class="hero-bird" src="/static/bird.jpg" alt="A screaming seagull">
 </section>
@@ -29,9 +29,9 @@
         <input type="radio" name="severity" value="info" {{if eq .Form.Severity "info"}}checked{{end}}>
         <span>ℹ️ Info</span>
       </label>
-      <label class="sev sev-seagull">
-        <input type="radio" name="severity" value="seagull" {{if eq .Form.Severity "seagull"}}checked{{end}}>
-        <span>🐦 Seagull <em>for jokes</em></span>
+      <label class="sev sev-funny">
+        <input type="radio" name="severity" value="funny" {{if eq .Form.Severity "funny"}}checked{{end}}>
+        <span>😂 Funny <em>for jokes</em></span>
       </label>
     </fieldset>
 

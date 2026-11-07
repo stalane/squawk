@@ -14,7 +14,7 @@
 {{if .Alerts}}
 <table class="table">
   <thead>
-    <tr><th>Sent</th><th>Severity</th><th>Alert</th><th>Audience</th><th>Status</th></tr>
+    <tr><th>Sent</th><th>Severity</th><th>Alert</th><th>Audience</th><th>Status</th><th></th></tr>
   </thead>
   <tbody>
     {{range .Alerts}}
@@ -24,6 +24,12 @@
       <td><a href="/alerts/{{.ID}}">{{.Line}}</a></td>
       <td>{{.Audience}}</td>
       <td><span class="badge {{if eq .Status "sent"}}ok{{else}}bad{{end}}">{{.Status}}</span></td>
+      <td class="actions">
+        <form method="post" action="/alerts/{{.ID}}/delete" onsubmit="return confirm('Delete this alert from history?')">
+          <input type="hidden" name="csrf" value="{{$.CSRF}}">
+          <button class="danger" type="submit">Delete</button>
+        </form>
+      </td>
     </tr>
     {{end}}
   </tbody>

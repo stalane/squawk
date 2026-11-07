@@ -53,6 +53,7 @@ a:hover { text-decoration: underline; }
 }
 .brand img { border-radius: 8px; }
 .brand:hover { text-decoration: none; }
+.accent-green { color: var(--green); }
 
 nav { display: flex; gap: 18px; flex-wrap: wrap; }
 nav a { color: var(--muted); font-weight: 600; }
@@ -151,7 +152,7 @@ legend, .field > span {
 .sev-urgent:has(input:checked) { border-color: var(--red); background: #2a1015; }
 .sev-warning:has(input:checked) { border-color: var(--gold); background: #2a2110; }
 .sev-info:has(input:checked) { border-color: var(--blue); }
-.sev-seagull:has(input:checked) { border-color: var(--violet); background: #1e1630; }
+.sev-funny:has(input:checked), .sev-seagull:has(input:checked) { border-color: var(--violet); background: #1e1630; }
 
 .field { display: block; margin-bottom: 16px; }
 .field em { font-style: normal; text-transform: none; letter-spacing: 0; font-weight: 400; }
@@ -293,7 +294,7 @@ button.danger:hover { border-color: var(--red); }
 }
 .badge.sev-urgent { color: #ff9ea2; border-color: #6b2026; background: #2a1015; }
 .badge.sev-warning { color: #ffd479; border-color: #5c4514; background: #2a2110; }
-.badge.sev-seagull { color: #d3c4ff; border-color: #4b3a7a; background: #1e1630; }
+.badge.sev-funny, .badge.sev-seagull { color: #d3c4ff; border-color: #4b3a7a; background: #1e1630; }
 .badge.sev-info { color: #9cc8ff; border-color: #24506f; background: #0e2233; }
 .badge.ok { color: #7ef0bf; border-color: #1d5c45; background: #0d2a20; }
 .badge.bad { color: #ff9ea2; border-color: #6b2026; background: #2a1015; }

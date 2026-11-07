@@ -1,11 +1,11 @@
-# squawk
+# squawk box
 
 Send-only urgent alerts over [ntfy](https://ntfy.sh). One static Go binary with a
 loopback web UI, local history and resend.
 
 squawk is for the human alert, not the machine alert: compose a warning, pick an
 audience, see exactly what subscribers will get, and publish it. Attach a JPEG or
-PNG, or let the Seagull severity attach the bird for you. Subscribers use the ntfy
+PNG, or let the Funny severity attach the seagull for you. Subscribers use the ntfy
 app or web page and never share a phone number or email address.
 
 ```
@@ -48,7 +48,7 @@ headless machine use `squawk serve` and open the URL yourself.
 | Urgent | 🚨 | 5 (max) | active theft, compromise, act now |
 | Warning | ⚠️ | 4 (high) | a fix is available, avoid a thing |
 | Info | ℹ️ | 3 (default) | context, follow-ups |
-| Seagull | 🐦 | 3 (default) | jokes; attaches the seagull image automatically |
+| Funny | 😂 | 3 (default) | jokes; attaches the seagull image automatically |
 
 ## CLI
 
@@ -59,7 +59,7 @@ squawk send --audience Family --severity urgent \
   --link https://example.com/advisory
 
 squawk send --audience Family --severity info --headline "Test" --details "Hello" --dry-run
-squawk send --audience Family --severity seagull --headline "Mine now"
+squawk send --audience Family --severity funny --headline "Mine now"
 squawk send --audience Family --severity urgent --headline "Act now" --image advisory.jpg
 squawk topics list
 squawk topics add Clients

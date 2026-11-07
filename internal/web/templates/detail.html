@@ -15,9 +15,15 @@
     {{if .Alert.Error}}<dt>Error</dt><dd class="error-text">{{.Alert.Error}}</dd>{{end}}
     {{if .Alert.ResentFrom}}<dt>Resent from</dt><dd><a href="/alerts/{{.Alert.ResentFrom}}">alert {{.Alert.ResentFrom}}</a></dd>{{end}}
   </dl>
-  <form method="post" action="/alerts/{{.Alert.ID}}/resend">
-    <input type="hidden" name="csrf" value="{{.CSRF}}">
-    <button class="primary" type="submit">Resend this alert</button>
-  </form>
+  <div class="actions">
+    <form method="post" action="/alerts/{{.Alert.ID}}/resend">
+      <input type="hidden" name="csrf" value="{{.CSRF}}">
+      <button class="primary" type="submit">Resend this alert</button>
+    </form>
+    <form method="post" action="/alerts/{{.Alert.ID}}/delete" onsubmit="return confirm('Delete this alert from history?')">
+      <input type="hidden" name="csrf" value="{{.CSRF}}">
+      <button class="danger" type="submit">Delete from history</button>
+    </form>
+  </div>
 </article>
 {{end}}

@@ -285,7 +285,7 @@ func runSend(ctx context.Context, g globals, args []string, stdout, stderr io.Wr
 			return 1
 		}
 		attachment = a
-	} else if severity == format.Seagull {
+	} else if severity == format.Funny {
 		attachment = &ntfy.Attachment{Filename: assets.SeagullName, ContentType: assets.SeagullType, Data: assets.Seagull}
 	}
 

@@ -356,11 +356,11 @@ func TestDetailsAreOptional(t *testing.T) {
 	}
 }
 
-func TestSeagullAutoAttachesImage(t *testing.T) {
+func TestFunnyAutoAttachesImage(t *testing.T) {
 	h := newHarness(t, true, "")
 	req := form(url.Values{
 		"csrf":     {h.server.CSRF()},
-		"severity": {"seagull"},
+		"severity": {"funny"},
 		"audience": {"Family"},
 		"headline": {"Mine now"},
 	})
@@ -369,7 +369,7 @@ func TestSeagullAutoAttachesImage(t *testing.T) {
 	if rec.Code != http.StatusSeeOther {
 		t.Fatalf("got %d: %s", rec.Code, rec.Body.String())
 	}
-	if h.pub.last.Title != "🐦 Mine now" || h.pub.last.Priority != 3 {
+	if h.pub.last.Title != "😂 Mine now" || h.pub.last.Priority != 3 {
 		t.Fatalf("message %+v", h.pub.last)
 	}
 	if h.pub.lastAttachment.Filename != "squawk.jpg" || len(h.pub.lastAttachment.Data) == 0 {
@@ -436,5 +436,39 @@ func TestRejectsNonImageAttachment(t *testing.T) {
 	}
 	if h.pub.calls != 0 {
 		t.Fatal("must not publish a non-image")
+	}
+}
+
+func TestDeleteAlertFromHistory(t *testing.T) {
+	h := newHarness(t, true, "")
+	send := form(url.Values{
+		"csrf": {h.server.CSRF()}, "severity": {"info"}, "audience": {"Family"}, "headline": {"Delete me"},
+	})
+	send.URL.Path = "/send"
+	created := h.do(send)
+	if created.Code != http.StatusSeeOther {
+		t.Fatalf("send: %d", created.Code)
+	}
+	location := created.Header().Get("Location")
+
+	del := form(url.Values{"csrf": {h.server.CSRF()}})
+	del.URL.Path = location + "/delete"
+	deleted := h.do(del)
+	if deleted.Code != http.StatusSeeOther || deleted.Header().Get("Location") != "/history" {
+		t.Fatalf("delete: %d %q", deleted.Code, deleted.Header().Get("Location"))
+	}
+
+	detail := httptest.NewRequest("GET", location, nil)
+	if got := h.do(detail); got.Code != http.StatusNotFound {
+		t.Fatalf("detail after delete: %d", got.Code)
+	}
+}
+
+func TestDeleteRequiresCSRF(t *testing.T) {
+	h := newHarness(t, true, "")
+	del := form(url.Values{})
+	del.URL.Path = "/alerts/1/delete"
+	if got := h.do(del); got.Code != http.StatusForbidden {
+		t.Fatalf("got %d", got.Code)
 	}
 }

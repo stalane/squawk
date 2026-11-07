@@ -65,6 +65,7 @@ type composeData struct {
 
 type historyData struct {
 	Page     string
+	CSRF     string
 	Alerts   []store.Alert
 	Query    string
 	Severity string
@@ -164,6 +165,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /history", s.handleHistory)
 	mux.HandleFunc("GET /alerts/{id}", s.handleDetail)
 	mux.HandleFunc("POST /alerts/{id}/resend", s.handleResend)
+	mux.HandleFunc("POST /alerts/{id}/delete", s.handleDeleteAlert)
 	mux.HandleFunc("GET /audiences", s.handleAudiences)
 	mux.HandleFunc("POST /audiences", s.handleCreateAudience)
 	mux.HandleFunc("GET /audiences/{id}", s.handleEditAudience)
@@ -410,7 +412,7 @@ func (s *Server) handleHistory(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	s.render(w, http.StatusOK, "history", historyData{Page: "history", Alerts: alerts, Query: query, Severity: severity})
+	s.render(w, http.StatusOK, "history", historyData{Page: "history", CSRF: s.csrf, Alerts: alerts, Query: query, Severity: severity})
 }
 
 func (s *Server) handleDetail(w http.ResponseWriter, r *http.Request) {
@@ -500,6 +502,23 @@ func (s *Server) handleResend(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.Redirect(w, r, "/alerts/"+strconv.FormatInt(newID, 10), http.StatusSeeOther)
+}
+
+func (s *Server) handleDeleteAlert(w http.ResponseWriter, r *http.Request) {
+	if !s.checkCSRF(r) {
+		http.Error(w, "invalid CSRF token", http.StatusForbidden)
+		return
+	}
+	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	if err := s.store.DeleteAlert(r.Context(), id); err != nil && !errors.Is(err, store.ErrNotFound) {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	http.Redirect(w, r, "/history", http.StatusSeeOther)
 }
 
 func (s *Server) handleAudiences(w http.ResponseWriter, r *http.Request) {
@@ -798,7 +817,7 @@ func (s *Server) readAttachment(r *http.Request, severity format.Severity) (*ntf
 	if !errors.Is(err, http.ErrMissingFile) && !errors.Is(err, http.ErrNotMultipart) {
 		return nil, errors.New("could not read the image")
 	}
-	if severity == format.Seagull {
+	if severity == format.Funny {
 		return &ntfy.Attachment{Filename: squawkassets.SeagullName, ContentType: squawkassets.SeagullType, Data: squawkassets.Seagull}, nil
 	}
 	return nil, nil

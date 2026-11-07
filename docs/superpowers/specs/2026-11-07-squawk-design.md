@@ -81,7 +81,7 @@ sent.
 | `urgent` | 🚨 | `5` (max, bypasses Do Not Disturb) | `urgent` |
 | `warning` | ⚠️ | `4` (high) | `advisory` |
 | `info` | ℹ️ | `3` (default) | `notice` |
-| `seagull` | 🐦 | `3` (default) | `seagull` |
+| `funny` | 😂 | `3` (default) | `funny` |
 
 Tags deliberately are not ntfy emoji short codes (`rotating_light`, `warning`,
 `information_source`, `bird`). ntfy converts a matching tag into an emoji and

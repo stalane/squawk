@@ -234,7 +234,7 @@ func TestPublishAttachment(t *testing.T) {
 	data := []byte{0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46}
 	c := ntfy.New(ntfy.Config{BaseURL: srv.URL, Timeout: time.Second, MaxAttempts: 1})
 	res, err := c.PublishAttachment(context.Background(), "squawk-images", ntfy.Message{
-		Title: "🐦 Seagull", Body: "mine", Priority: 3, Tags: []string{"bird"},
+		Title: "😂 Funny", Body: "mine", Priority: 3, Tags: []string{"funny"},
 	}, ntfy.Attachment{Filename: "squawk.jpg", ContentType: "image/jpeg", Data: data})
 	if err != nil {
 		t.Fatal(err)
@@ -245,7 +245,7 @@ func TestPublishAttachment(t *testing.T) {
 	if got.Header.Get("Filename") != "squawk.jpg" || got.Header.Get("Content-Type") != "image/jpeg" {
 		t.Fatalf("headers %v", got.Header)
 	}
-	if got.Header.Get("Message") != "mine" || got.Header.Get("Title") != "🐦 Seagull" {
+	if got.Header.Get("Message") != "mine" || got.Header.Get("Title") != "😂 Funny" {
 		t.Fatalf("headers %v", got.Header)
 	}
 	if string(body) != string(data) {

@@ -4,8 +4,8 @@
   var form = document.getElementById("compose-form");
   if (!form) return;
 
-  var emoji = { urgent: "🚨", warning: "⚠️", info: "ℹ️", seagull: "🐦" };
-  var label = { urgent: "Urgent", warning: "Warning", info: "Info", seagull: "Seagull" };
+  var emoji = { urgent: "🚨", warning: "⚠️", info: "ℹ️", funny: "😂" };
+  var label = { urgent: "Urgent", warning: "Warning", info: "Info", funny: "Funny" };
 
   var titleEl = document.getElementById("pv-title");
   var bodyEl = document.getElementById("pv-body");
@@ -56,7 +56,7 @@
         imageURL = URL.createObjectURL(file);
         imagePreview.src = imageURL;
         imagePreview.hidden = false;
-      } else if (sev === "seagull") {
+      } else if (sev === "funny") {
         imagePreview.src = "/static/bird.jpg";
         imagePreview.hidden = false;
       } else {

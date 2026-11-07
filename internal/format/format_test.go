@@ -15,10 +15,11 @@ func TestParseSeverity(t *testing.T) {
 		prio  int
 		tag   string
 	}{
+		{"seagull", format.Funny, "😂", 3, "funny"},
 		{"urgent", format.Urgent, "🚨", 5, "urgent"},
 		{"warning", format.Warning, "⚠️", 4, "advisory"},
 		{"info", format.Info, "ℹ️", 3, "notice"},
-		{"seagull", format.Seagull, "🐦", 3, "seagull"},
+		{"funny", format.Funny, "😂", 3, "funny"},
 		{"URGENT", format.Urgent, "🚨", 5, "urgent"},
 		{" warning ", format.Warning, "⚠️", 4, "advisory"},
 	}
@@ -105,11 +106,11 @@ func TestLineWithoutDetails(t *testing.T) {
 }
 
 func TestLineWithLinkButNoDetails(t *testing.T) {
-	a := format.Alert{Severity: format.Seagull, Headline: "Mine", Link: "https://e.x"}
+	a := format.Alert{Severity: format.Funny, Headline: "Mine", Link: "https://e.x"}
 	if err := a.Validate(); err != nil {
 		t.Fatal(err)
 	}
-	if got := a.Line(); got != "🐦 Mine -- https://e.x" {
+	if got := a.Line(); got != "😂 Mine -- https://e.x" {
 		t.Fatalf("line %q", got)
 	}
 	if got := a.Body(); got != "Squawk!\n\nhttps://e.x" {
@@ -146,9 +147,9 @@ func TestValidateMultilineDetails(t *testing.T) {
 func TestSeverityTagsAreNotEmojiShortCodes(t *testing.T) {
 	emojiCodes := map[string]bool{
 		"rotating_light": true, "warning": true, "information_source": true,
-		"bird": true, "skull": true, "triangular_flag_on_post": true,
+		"bird": true, "joy": true, "skull": true, "triangular_flag_on_post": true,
 	}
-	for _, sev := range []format.Severity{format.Urgent, format.Warning, format.Info, format.Seagull} {
+	for _, sev := range []format.Severity{format.Urgent, format.Warning, format.Info, format.Funny} {
 		if emojiCodes[sev.Tag()] {
 			t.Fatalf("%s tag %q is an ntfy emoji short code; it would duplicate the title emoji", sev, sev.Tag())
 		}

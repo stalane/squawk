@@ -287,6 +287,21 @@ func (s *Store) SearchAlerts(ctx context.Context, query, severity string, limit 
 	return out, rows.Err()
 }
 
+func (s *Store) DeleteAlert(ctx context.Context, id int64) error {
+	res, err := s.db.ExecContext(ctx, `DELETE FROM alerts WHERE id = ?`, id)
+	if err != nil {
+		return err
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
 func (s *Store) GetAlert(ctx context.Context, id int64) (Alert, error) {
 	row := s.db.QueryRowContext(ctx, `SELECT `+alertColumns+` FROM alerts WHERE id = ?`, id)
 	a, err := scanAlert(row)
